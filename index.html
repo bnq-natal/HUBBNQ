@@ -170,6 +170,25 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
 </style>
 </head>
 <body>
+
+<!-- TELA DE LOGIN -->
+<div id="loginScreen" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#1e293b,#2563eb);z-index:9999;align-items:center;justify-content:center;flex-direction:column">
+  <div style="background:#fff;border-radius:16px;padding:40px;max-width:400px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <img src="https://tess-cdn.pareto.io/assets/uploads/05514a92-5295-40f3-a3c9-ab53a29a8da0.png" style="width:64px;height:64px;border-radius:12px;margin-bottom:16px">
+    <h1 style="font-size:22px;font-weight:800;color:#1e293b;margin-bottom:6px">BnQ Hub</h1>
+    <p style="font-size:13px;color:#64748b;margin-bottom:24px">Central de Gestão — Brincar no Quintal</p>
+    <div id="loginStatus" style="font-size:12px;color:#64748b;margin-bottom:16px;min-height:18px">Faça login com o Google para continuar</div>
+    <button id="btnLoginGoogle" onclick="gdLogin()" style="display:none;width:100%;padding:12px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:12px">
+       Entrar com Google
+    </button>
+    <div id="loginConfigArea" style="margin-top:16px;padding-top:16px;border-top:1px solid #e2e8f0">
+      <p style="font-size:11px;color:#94a3b8;margin-bottom:8px">Primeira vez? Configure o Client ID:</p>
+      <input type="text" id="gdClientIdLogin" placeholder="xxxxx.apps.googleusercontent.com" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px;margin-bottom:8px;box-sizing:border-box">
+      <button onclick="gdConfigureFromLogin()" style="width:100%;padding:8px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer"> Salvar e Conectar</button>
+    </div>
+  </div>
+</div>
+<div id="appContent" style="display:none">
 <div class="ly">
 
 <!-- SIDEBAR -->
@@ -1053,12 +1072,15 @@ const importBase = async (file, tipo) => {
   reader.onerror = () => alert('Erro ao ler arquivo.');
   reader.onload = async e => {
     try {
-      // cellDates:true garante que datas Excel viram Date JS (funciona com raw:true)
       const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array', cellDates:true});
       let data = [];
       if (tipo === 'fest') data = parseFest(wb);
       else if (tipo === 'flx') data = parseFlx(wb);
       else data = parseCTCol(wb);
+      if (!data || data.length === 0) {
+        alert('Nenhum dado encontrado no arquivo. Verifique se o formato está correto.');
+        return;
+      }
       const anos = anosOf(data);
       const lastDate = tipo === 'fest'
         ? (data.map(r => r.DATA_FESTA).filter(Boolean).sort((a,b) => new Date(b)-new Date(a))[0]
@@ -1071,6 +1093,12 @@ const importBase = async (file, tipo) => {
       updateImpUI(tipo);
       popAll();
       renderHome();
+      // Salvar no Drive automaticamente
+      if (GD.TOKEN && GD.DATA_FILE_ID) {
+        gdSetStatus('syncing', 'Salvando no Drive...');
+        await gdSyncToDrive();
+        gdSetStatus('ok', '☁️ Salvo no Drive — ' + new Date().toLocaleTimeString('pt-BR'));
+      }
       alert('✓ ' + data.length + ' registros (' + tipo + '). Anos: ' + anos.join(', '));
     } catch(err) {
       console.error(err);
@@ -1090,6 +1118,22 @@ const updateImpUI = tipo => {
     const dt = document.getElementById(m.dt); if (dt) dt.textContent = 'Último: ' + (meta.lastDate||'?') + ' · Importado: ' + meta.importedAt;
     document.getElementById(m.sd)?.classList.add('ok');
   }
+};
+
+
+// ── Configurar da tela de login ────────────────────────────
+const gdConfigureFromLogin = async () => {
+  const el = document.getElementById('gdClientIdLogin');
+  const cid = el && el.value.trim();
+  if (!cid) { alert('Informe o Client ID OAuth 2.0.'); return; }
+  GD.CLIENT_ID = cid;
+  await iSet('meta', 'gdconfig', { CLIENT_ID: cid });
+  // Sincronizar com o campo de configurações também
+  const el2 = document.getElementById('gdClientId'); if (el2) el2.value = cid;
+  document.getElementById('loginStatus').textContent = 'Client ID salvo! Clique em Entrar com Google';
+  const loginBtn = document.getElementById('btnLoginGoogle');
+  if (loginBtn) loginBtn.style.display = 'inline-flex';
+  ['btnGdLogin', 'btnGdLoginCfg'].forEach(id => { const btn = document.getElementById(id); if (btn) btn.style.display = 'inline-flex'; });
 };
 
 const carregarTudo = async () => {
@@ -2087,13 +2131,26 @@ document.getElementById('btnComR')?.addEventListener('click', () => {
 const GD = {
   CLIENT_ID: '',
   SCOPE: 'https://www.googleapis.com/auth/drive.file',
-  FILE_NAME: 'bnq_hub_flags.json',
-  FILE_ID: null,
+  DATA_FILE: 'bnq_hub_data.json',
+  DATA_FILE_ID: null,
   TOKEN: null,
+  TOKEN_TS: 0,
   flags: {},
   ready: false,
+  user: null,
 };
 
+// ── Chave primária de um registro ──────────────────────────
+const getPK = (r) => {
+  if (r.CODCRI && String(r.CODCRI).trim()) return String(r.CODCRI).trim();
+  if (r.NOME) return r.NOME.trim();
+  return null;
+};
+
+// ── Normalizar chave para comparação (só case-insensitive) ─
+const normPK = (k) => k ? k.toLowerCase().trim() : '';
+
+// ── Carrega script GIS ─────────────────────────────────────
 const gdLoadGIS = () => new Promise(res => {
   if (window.google && window.google.accounts) { res(); return; }
   const sc = document.createElement('script');
@@ -2102,94 +2159,220 @@ const gdLoadGIS = () => new Promise(res => {
   document.head.appendChild(sc);
 });
 
+// ── Tela de login ──────────────────────────────────────────
+const gdShowLogin = () => {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('appContent').style.display = 'none';
+};
+const gdHideLogin = () => {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appContent').style.display = 'block';
+};
+
+// ── Login OAuth ────────────────────────────────────────────
 const gdLogin = async () => {
-  if (!GD.CLIENT_ID) { alert('Configure o Client ID em Configuracoes.'); return; }
+  if (!GD.CLIENT_ID) {
+    alert('Configure o Client ID em ⚙️ Configurações.');
+    return;
+  }
   try {
     await gdLoadGIS();
-    gdSetStatus('syncing', 'Aguardando autorizacao...');
+    gdSetStatus('syncing', 'Aguardando autorização...');
     const _tc = google.accounts.oauth2.initTokenClient({
       client_id: GD.CLIENT_ID,
-      scope: GD.SCOPE,
+      scope: GD.SCOPE + ' https://www.googleapis.com/auth/userinfo.email',
       callback: async (resp) => {
-        if (resp.error) { gdSetStatus('error', 'Erro: ' + (resp.error_description||resp.error)); return; }
+        if (resp.error) {
+          gdSetStatus('error', 'Erro: ' + (resp.error_description || resp.error));
+          gdShowLogin();
+          return;
+        }
         GD.TOKEN = resp.access_token;
-        await iSet('meta', 'gdtoken', { token: GD.TOKEN, ts: Date.now() });
-        gdSetStatus('syncing', 'Conectando ao Drive...');
-        await gdSyncFlags();
+        GD.TOKEN_TS = Date.now();
+        await iSet('meta', 'gdtoken', { token: GD.TOKEN, ts: GD.TOKEN_TS });
+        gdSetStatus('syncing', 'Carregando dados do Drive...');
+        await gdSyncFromDrive();
+        gdHideLogin();
         gdSetStatus('ok', '☁️ Drive conectado');
+        gdStartAutoSave();
       },
-      error_callback: (err) => { gdSetStatus('error', 'Erro: '+(err.message||err.type||'popup bloqueado')); }
+      error_callback: (err) => {
+        gdSetStatus('error', 'Erro: ' + (err.message || err.type || 'popup bloqueado'));
+        gdShowLogin();
+      }
     });
     _tc.requestAccessToken({ prompt: 'consent' });
-  } catch(e) { gdSetStatus('error', 'Erro: ' + e.message); }
-};
-
-const gdLogout = async () => {
-  if (GD.TOKEN && window.google) google.accounts.oauth2.revoke(GD.TOKEN, ()=>{});
-  GD.TOKEN = null; GD.FILE_ID = null; GD.ready = false;
-  await iDel('meta', 'gdtoken');
-  gdSetStatus('off', 'Drive: desconectado');
-};
-
-const gdSetStatus = (state, msg) => {
-  const cors = { ok:'#16a34a', error:'#dc2626', syncing:'#d97706', off:'#9ca3af' };
-  const cor = cors[state] || '#9ca3af';
-  ['gdDot','gdDot2'].forEach(id=>{ const el=document.getElementById(id); if(el)el.style.background=cor; });
-  ['gdTxt','gdTxt2'].forEach(id=>{ const el=document.getElementById(id); if(el)el.textContent=msg; });
-  ['btnGdLogin','btnGdLoginCfg'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display=state==='ok'?'none':'inline-flex'; });
-  ['btnGdLogout','btnGdLogoutCfg'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display=state==='ok'?'inline-flex':'none'; });
-  const sdGd=document.getElementById('sd-gd'); if(sdGd) sdGd.querySelector('.d').style.background=cor;
-};
-
-const gdFindOrCreate = async () => {
-  const q = encodeURIComponent("name='"+GD.FILE_NAME+"' and trashed=false");
-  const r = await fetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id)&spaces=drive',
-    { headers: { Authorization: 'Bearer '+GD.TOKEN } });
-  const d = await r.json();
-  if (d.files && d.files.length > 0) { GD.FILE_ID = d.files[0].id; return; }
-  const bnd = 'bnqhub_bnd';
-  const meta = JSON.stringify({ name: GD.FILE_NAME, mimeType: 'application/json' });
-  const body = '--'+bnd+'\r\nContent-Type: application/json\r\n\r\n'+meta+
-    '\r\n--'+bnd+'\r\nContent-Type: application/json\r\n\r\n{}\r\n--'+bnd+'--';
-  const cr = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
-    { method:'POST', headers:{ Authorization:'Bearer '+GD.TOKEN, 'Content-Type':'multipart/related; boundary='+bnd }, body });
-  const created = await cr.json();
-  GD.FILE_ID = created.id;
-};
-
-const gdReadFile = async () => {
-  const r = await fetch('https://www.googleapis.com/drive/v3/files/'+GD.FILE_ID+'?alt=media',
-    { headers: { Authorization: 'Bearer '+GD.TOKEN } });
-  if (!r.ok) return {};
-  try { return await r.json(); } catch(e) { return {}; }
-};
-
-const gdSave = async () => {
-  await iSet('meta', 'gdflags', GD.flags);
-  if (!GD.TOKEN || !GD.FILE_ID) return;
-  await fetch('https://www.googleapis.com/upload/drive/v3/files/'+GD.FILE_ID+'?uploadType=media',
-    { method:'PATCH', headers:{ Authorization:'Bearer '+GD.TOKEN, 'Content-Type':'application/json' }, body: JSON.stringify(GD.flags) });
-};
-
-const gdSyncFlags = async () => {
-  try {
-    await gdFindOrCreate();
-    const remote = await gdReadFile();
-    GD.flags = Object.assign({}, GD.flags, remote);
-    await iSet('meta', 'gdflags', GD.flags);
-    GD.ready = true;
-  } catch(err) {
-    console.error('[GD] Sync error:', err);
-    gdSetStatus('error', 'Erro ao sincronizar');
+  } catch(e) {
+    gdSetStatus('error', 'Erro: ' + e.message);
+    gdShowLogin();
   }
 };
 
+// ── Logout ─────────────────────────────────────────────────
+const gdLogout = async () => {
+  if (GD.TOKEN && window.google) google.accounts.oauth2.revoke(GD.TOKEN, () => {});
+  GD.TOKEN = null; GD.DATA_FILE_ID = null; GD.ready = false;
+  await iDel('meta', 'gdtoken');
+  gdSetStatus('off', 'Drive: desconectado');
+  gdShowLogin();
+};
+
+// ── Status visual ──────────────────────────────────────────
+const gdSetStatus = (state, msg) => {
+  const cors = { ok: '#16a34a', error: '#dc2626', syncing: '#d97706', off: '#9ca3af' };
+  const cor = cors[state] || '#9ca3af';
+  ['gdDot', 'gdDot2'].forEach(id => { const el = document.getElementById(id); if (el) el.style.background = cor; });
+  ['gdTxt', 'gdTxt2'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = msg; });
+  ['btnGdLogin', 'btnGdLoginCfg'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = state === 'ok' ? 'none' : 'inline-flex'; });
+  ['btnGdLogout', 'btnGdLogoutCfg'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = state === 'ok' ? 'inline-flex' : 'none'; });
+  const sdGd = document.getElementById('sd-gd'); if (sdGd) sdGd.querySelector('.d').style.background = cor;
+  const loginStatus = document.getElementById('loginStatus'); if (loginStatus) loginStatus.textContent = msg;
+};
+
+// ── Busca ou cria arquivo de dados no Drive ────────────────
+const gdFindOrCreateData = async () => {
+  const q = encodeURIComponent("name='" + GD.DATA_FILE + "' and trashed=false");
+  const r = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id)&spaces=drive',
+    { headers: { Authorization: 'Bearer ' + GD.TOKEN } });
+  const d = await r.json();
+  if (d.files && d.files.length > 0) { GD.DATA_FILE_ID = d.files[0].id; return; }
+  // Criar arquivo vazio
+  const bnd = 'bnqhub_bnd';
+  const meta = JSON.stringify({ name: GD.DATA_FILE, mimeType: 'application/json' });
+  const emptyData = JSON.stringify({ ct: [], col: [], fest: [], flx: [], flags: {}, version: 3 });
+  const body = '--' + bnd + '\r\nContent-Type: application/json\r\n\r\n' + meta + '\r\n--' + bnd + '\r\nContent-Type: application/json\r\n\r\n' + emptyData + '\r\n--' + bnd + '--';
+  const cr = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+    { method: 'POST', headers: { Authorization: 'Bearer ' + GD.TOKEN, 'Content-Type': 'multipart/related; boundary=' + bnd }, body });
+  const created = await cr.json();
+  GD.DATA_FILE_ID = created.id;
+};
+
+// ── Lê dados do Drive ──────────────────────────────────────
+const gdReadData = async () => {
+  const r = await fetch('https://www.googleapis.com/drive/v3/files/' + GD.DATA_FILE_ID + '?alt=media',
+    { headers: { Authorization: 'Bearer ' + GD.TOKEN } });
+  if (!r.ok) return null;
+  try { return await r.json(); } catch(e) { return null; }
+};
+
+// ── Salva dados no Drive ───────────────────────────────────
+const gdWriteData = async (data) => {
+  if (!GD.TOKEN || !GD.DATA_FILE_ID) return;
+  await fetch('https://www.googleapis.com/upload/drive/v3/files/' + GD.DATA_FILE_ID + '?uploadType=media',
+    { method: 'PATCH', headers: { Authorization: 'Bearer ' + GD.TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify(data) });
+};
+
+// ── Merge de arrays pela chave primária ────────────────────
+const mergeByPK = (local, remote) => {
+  if (!remote || !remote.length) return local;
+  if (!local || !local.length) return remote;
+  // Usar remote como base (mais recente), preservar flags do local
+  return remote;
+};
+
+// ── Merge de flags ─────────────────────────────────────────
+const mergeFlags = (local, remote) => {
+  const merged = Object.assign({}, local || {});
+  if (remote) {
+    Object.entries(remote).forEach(([k, v]) => {
+      if (!merged[k] || new Date(v.ts || 0) > new Date(merged[k].ts || 0)) {
+        merged[k] = v;
+      }
+    });
+  }
+  return merged;
+};
+
+// ── Sincronizar: Drive → Local (download) ─────────────────
+const gdSyncFromDrive = async () => {
+  try {
+    await gdFindOrCreateData();
+    const remote = await gdReadData();
+    if (remote) {
+      // Merge flags (bidirecional - mais recente vence)
+      GD.flags = mergeFlags(GD.flags, remote.flags || {});
+      // Dados: remote substitui local (excel mais recente)
+      if (remote.ct && remote.ct.length) { DB.ct = remote.ct; await iSet('bases', 'ct', DB.ct); updateImpUI('ct'); }
+      if (remote.col && remote.col.length) { DB.col = remote.col; await iSet('bases', 'col', DB.col); updateImpUI('col'); }
+      if (remote.fest && remote.fest.length) { DB.fest = remote.fest; await iSet('bases', 'fest', DB.fest); updateImpUI('fest'); }
+      if (remote.flx && remote.flx.length) { DB.flx = remote.flx; await iSet('bases', 'flx', DB.flx); updateImpUI('flx'); }
+      await iSet('meta', 'gdflags', GD.flags);
+      popAll();
+      renderHome();
+    }
+    GD.ready = true;
+    console.log('[GD] Sincronizado do Drive');
+  } catch(err) {
+    console.error('[GD] Sync error:', err);
+    gdSetStatus('error', 'Erro ao sincronizar: ' + err.message);
+  }
+};
+
+// ── Sincronizar: Local → Drive (upload) ───────────────────
+const gdSyncToDrive = async () => {
+  if (!GD.TOKEN || !GD.DATA_FILE_ID) return;
+  try {
+    const data = {
+      ct: DB.ct, col: DB.col, fest: DB.fest, flx: DB.flx,
+      flags: GD.flags,
+      version: 3,
+      updatedAt: new Date().toISOString()
+    };
+    await gdWriteData(data);
+    await iSet('meta', 'gdflags', GD.flags);
+    console.log('[GD] Salvo no Drive');
+  } catch(err) {
+    console.error('[GD] Save error:', err);
+  }
+};
+
+// ── Sincronização bidirecional (botão Sincronizar) ─────────
+const gdSync = async () => {
+  if (!GD.TOKEN) { gdShowLogin(); return; }
+  gdSetStatus('syncing', 'Sincronizando...');
+  try {
+    await gdFindOrCreateData();
+    const remote = await gdReadData();
+    if (remote) {
+      // Merge flags bidirecional
+      GD.flags = mergeFlags(GD.flags, remote.flags || {});
+      // Dados: remote substitui (excel mais recente vence)
+      if (remote.ct && remote.ct.length) { DB.ct = remote.ct; await iSet('bases', 'ct', DB.ct); updateImpUI('ct'); }
+      if (remote.col && remote.col.length) { DB.col = remote.col; await iSet('bases', 'col', DB.col); updateImpUI('col'); }
+      if (remote.fest && remote.fest.length) { DB.fest = remote.fest; await iSet('bases', 'fest', DB.fest); updateImpUI('fest'); }
+      if (remote.flx && remote.flx.length) { DB.flx = remote.flx; await iSet('bases', 'flx', DB.flx); updateImpUI('flx'); }
+    }
+    // Upload do estado atual (merge)
+    await gdSyncToDrive();
+    popAll();
+    renderHome();
+    gdSetStatus('ok', '☁️ Sincronizado — ' + new Date().toLocaleTimeString('pt-BR'));
+  } catch(err) {
+    gdSetStatus('error', 'Erro: ' + err.message);
+  }
+};
+
+// ── Auto-save a cada 10 minutos ────────────────────────────
+let _autoSaveInterval = null;
+const gdStartAutoSave = () => {
+  if (_autoSaveInterval) clearInterval(_autoSaveInterval);
+  _autoSaveInterval = setInterval(async () => {
+    if (GD.TOKEN && GD.DATA_FILE_ID) {
+      await gdSyncToDrive();
+      console.log('[GD] Auto-save:', new Date().toLocaleTimeString('pt-BR'));
+    }
+  }, 10 * 60 * 1000); // 10 minutos
+};
+
+// ── Toggle de flag ─────────────────────────────────────────
 const gdToggle = async (nome) => {
-  const key = normN(nome);
+  const key = normPK(nome);
   const atual = GD.flags[key] && GD.flags[key].resolvido;
   GD.flags[key] = { nome, resolvido: !atual, ts: new Date().toISOString() };
-  await gdSave();
-  document.querySelectorAll('[data-gdkey="'+key+'"]').forEach(btn => {
+  // Salvar imediatamente no Drive
+  await gdSyncToDrive();
+  document.querySelectorAll('[data-gdkey="' + key + '"]').forEach(btn => {
     const res = GD.flags[key].resolvido;
     btn.textContent = res ? '✅ Resolvido' : '○ Pendente';
     btn.style.background = res ? '#dcfce7' : '#f1f5f9';
@@ -2198,41 +2381,52 @@ const gdToggle = async (nome) => {
   });
 };
 
-const gdGet = (nome) => GD.flags[normN(nome)] || { resolvido: false };
+// ── Retorna flag ───────────────────────────────────────────
+const gdGet = (nome) => GD.flags[normPK(nome)] || { resolvido: false };
 
+// ── Gera botão flag ────────────────────────────────────────
 const gdBtn = (nome) => {
-  const key = normN(nome);
+  const key = normPK(nome);
   const res = gdGet(nome).resolvido;
   const bg = res ? '#dcfce7' : '#f1f5f9';
   const cor = res ? '#166534' : '#475569';
   const bor = res ? '#bbf7d0' : '#e2e8f0';
   const lbl = res ? '✅ Resolvido' : '○ Pendente';
-  const safe = nome.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-  return '<button data-gdkey="'+key+'" onclick="gdToggle(\''+ safe +'\')" style="background:'+bg+';color:'+cor+';border:1px solid '+bor+';border-radius:4px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">'+lbl+'</button>';
+    const safe = nome.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  return '<button data-gdkey="' + key + '" onclick="gdToggle(\'' + safe + '\');" style="background:' + bg + ';color:' + cor + ';border:1px solid ' + bor + ';border-radius:4px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">' + lbl + '</button>';
 };
 
+// ── Exportar JSON manual ───────────────────────────────────
 const gdExport = () => {
-  const blob = new Blob([JSON.stringify(GD.flags,null,2)],{type:'application/json'});
+  const data = { ct: DB.ct, col: DB.col, fest: DB.fest, flx: DB.flx, flags: GD.flags, version: 3, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href=url;a.download='bnq_flags_backup.json';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  a.href = url; a.download = 'bnq_hub_backup.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 };
 
+// ── Importar JSON manual ───────────────────────────────────
 const gdImport = (file) => {
-  if(!file)return;
+  if (!file) return;
   const reader = new FileReader();
   reader.onload = async e => {
     try {
       const data = JSON.parse(e.target.result);
-      GD.flags = Object.assign({},GD.flags,data);
-      await gdSave();
-      alert('✅ '+Object.keys(data).length+' flags importados!');
-    } catch(err){alert('Erro: '+err.message);}
+      if (data.ct) { DB.ct = data.ct; await iSet('bases', 'ct', DB.ct); updateImpUI('ct'); }
+      if (data.col) { DB.col = data.col; await iSet('bases', 'col', DB.col); updateImpUI('col'); }
+      if (data.fest) { DB.fest = data.fest; await iSet('bases', 'fest', DB.fest); updateImpUI('fest'); }
+      if (data.flx) { DB.flx = data.flx; await iSet('bases', 'flx', DB.flx); updateImpUI('flx'); }
+      if (data.flags) { GD.flags = mergeFlags(GD.flags, data.flags); await iSet('meta', 'gdflags', GD.flags); }
+      popAll(); renderHome();
+      await gdSyncToDrive();
+      alert('✅ Backup importado com sucesso!');
+    } catch(err) { alert('Erro ao importar: ' + err.message); }
   };
   reader.readAsText(file);
 };
 
+// ── Salvar Client ID ───────────────────────────────────────
 const gdConfigure = async () => {
   const el = document.getElementById('gdClientId');
   const cid = el && el.value.trim();
@@ -2241,37 +2435,55 @@ const gdConfigure = async () => {
   await iSet('meta', 'gdconfig', { CLIENT_ID: cid });
   if (el) el.style.borderColor = '#16a34a';
   gdSetStatus('off', 'Client ID salvo — clique em Conectar');
-  ['btnGdLogin','btnGdLoginCfg'].forEach(id=>{ const btn=document.getElementById(id); if(btn) btn.style.display='inline-flex'; });
+  ['btnGdLogin', 'btnGdLoginCfg'].forEach(id => { const btn = document.getElementById(id); if (btn) btn.style.display = 'inline-flex'; });
+  // Atualizar botão na tela de login também
+  const loginBtn = document.getElementById('btnLoginGoogle');
+  if (loginBtn) loginBtn.style.display = 'inline-flex';
 };
 
+// ── Carregar config e inicializar ──────────────────────────
 const gdLoadConfig = async () => {
   const cfg = await iGet('meta', 'gdconfig');
   if (cfg && cfg.CLIENT_ID) {
     GD.CLIENT_ID = cfg.CLIENT_ID;
     const el = document.getElementById('gdClientId'); if (el) el.value = GD.CLIENT_ID;
-    ['btnGdLogin','btnGdLoginCfg'].forEach(id=>{ const btn=document.getElementById(id); if(btn) btn.style.display='inline-flex'; });
-    gdSetStatus('off', 'Client ID carregado — clique em Conectar');
+    ['btnGdLogin', 'btnGdLoginCfg'].forEach(id => { const btn = document.getElementById(id); if (btn) btn.style.display = 'inline-flex'; });
+    const loginBtn = document.getElementById('btnLoginGoogle');
+    if (loginBtn) loginBtn.style.display = 'inline-flex';
   }
+  // Carregar flags locais como fallback
   const local = await iGet('meta', 'gdflags');
   if (local && Object.keys(local).length > 0) { GD.flags = local; }
+  // Tentar reconectar com token salvo (sessão de 8h)
   const saved = await iGet('meta', 'gdtoken');
-  if (saved && saved.token && (Date.now() - saved.ts) < 3500000) {
+  if (saved && saved.token && (Date.now() - saved.ts) < 8 * 60 * 60 * 1000) {
     GD.TOKEN = saved.token;
+    GD.TOKEN_TS = saved.ts;
     gdSetStatus('syncing', 'Reconectando...');
-    gdSyncFlags().then(()=>gdSetStatus('ok','☁️ Drive reconectado')).catch(async()=>{
-      GD.TOKEN = null; await iDel('meta','gdtoken'); gdSetStatus('off','Token expirado — reconecte');
-    });
-  } else if (!cfg || !cfg.CLIENT_ID) {
-    gdSetStatus('off', 'Configure o Client ID para usar o Drive');
+    try {
+      await gdSyncFromDrive();
+      gdHideLogin();
+      gdSetStatus('ok', '☁️ Drive reconectado');
+      gdStartAutoSave();
+    } catch(e) {
+      GD.TOKEN = null;
+      await iDel('meta', 'gdtoken');
+      gdSetStatus('off', 'Sessão expirada — faça login');
+      gdShowLogin();
+    }
+  } else {
+    // Sem token válido - mostrar tela de login
+    gdShowLogin();
+    if (!cfg || !cfg.CLIENT_ID) {
+      gdSetStatus('off', 'Configure o Client ID para usar o Drive');
+    } else {
+      gdSetStatus('off', 'Faça login para continuar');
+    }
   }
 };
 
-const gdLoadFlags = async () => {
-  if (!GD.TOKEN) { await gdLoadConfig(); return; }
-  gdSetStatus('syncing', 'Sincronizando...');
-  await gdSyncFlags();
-  gdSetStatus('ok', '☁️ Drive conectado');
-};
+// ── Sincronizar (botão) ────────────────────────────────────
+const gdLoadFlags = gdSync;
 const mOpts = (t=true) => {
   const mesAtual = new Date().getMonth() + 1;
   const base = t ? [{v:'0',t:'Ano Todo'}, {v:'acc',t:'Acumulado (Jan→Atual)'}] : [];
@@ -2504,4 +2716,5 @@ const renderColGestao = () => renderGestao(
 
 }); // fim DOMContentLoaded
 </script>
+</div><!-- /appContent -->
 </body></html>
