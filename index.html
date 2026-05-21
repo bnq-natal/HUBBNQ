@@ -858,30 +858,26 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
       <input type="file" id="fLogo" accept="image/*" style="display:none">
       <button class="btn b-gh b-sm" onclick="document.getElementById('fLogo').click()">🖼️ Trocar logo</button>
     </div>
-        <!-- Flags Config -->
+        <!-- Google Drive Config -->
     <div style="margin-bottom:20px">
-      <div style="font-size:14px;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--bdr)">🚩 Flags "Resolvido" — Armazenamento Local</div>
-      <div class="al al-i" style="margin-bottom:10px">
-        Os flags <b>"Resolvido"</b> são salvos automaticamente no seu navegador e <b>persistem entre importações de Excel</b>. Use os botões abaixo para fazer backup entre dispositivos.
-      </div>
-      <div class="cfg-g" style="margin-bottom:12px">
-        <div class="ic">
-          <div class="ic-h"><div class="ic-ico">🚩</div><div><div class="ic-t">Backup de Flags</div><div class="ic-s">Exportar/importar flags entre dispositivos</div></div></div>
-          <div class="ic-st" style="margin-top:4px">
-            <div class="s-d ok" id="gdDot" style="background:#16a34a"></div>
-            <div class="ic-in" id="gdTxt2">💾 Flags salvos localmente</div>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-            <button class="btn b-p b-sm" onclick="gdExport()">📤 Exportar flags (JSON)</button>
-            <input type="file" id="fGdImport" accept=".json" style="display:none" onchange="gdImport(this.files[0]);this.value=''">
-            <button class="btn b-gh b-sm" onclick="document.getElementById('fGdImport').click()">📥 Importar flags (JSON)</button>
-            <button class="btn b-ok b-sm" id="btnGdSync" onclick="gdLoadFlags()">🔄 Recarregar flags</button>
-          </div>
-          <div style="font-size:11px;color:#64748b;margin-top:8px">
-            💡 <b>Dica:</b> Exporte os flags regularmente para backup. Para usar em outro dispositivo, importe o arquivo JSON exportado.
-          </div>
+      <div style="font-size:14px;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--bdr)">☁️ Google Drive — Flags "Resolvido"</div>
+      <div class="al al-i" style="margin-bottom:10px">Os flags <b>"Resolvido"</b> são salvos automaticamente no seu <b>Google Drive</b> e persistem entre importações e dispositivos.</div>
+      <div class="cfg-g" style="margin-bottom:12px"><div class="ic">
+        <div class="ic-h"><div class="ic-ico">🔑</div><div><div class="ic-t">Credenciais OAuth</div><div class="ic-s">Client ID do seu projeto Google Cloud</div></div></div>
+        <div class="fg"><label>Client ID (OAuth 2.0)</label><input type="text" id="gdClientId" placeholder="xxxxx.apps.googleusercontent.com" style="width:100%;padding:6px 8px;border:1px solid var(--bdr);border-radius:var(--r2);font-size:12px"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <button class="btn b-p b-sm" id="btnGdConfigure">💾 Salvar Client ID</button>
+          <button class="btn b-ok b-sm" id="btnGdLoginCfg" style="display:none">🔗 Conectar ao Google Drive</button>
+          <button class="btn b-err b-sm" id="btnGdLogoutCfg" style="display:none">⛔ Desconectar</button>
+          <button class="btn b-gh b-sm" id="btnGdSync">🔄 Sincronizar</button>
         </div>
-      </div>
+        <div class="ic-st" style="margin-top:8px"><div class="s-d" id="gdDot" style="background:#9ca3af"></div><div class="ic-in" id="gdTxt2">Não configurado</div></div>
+        <div style="border-top:1px solid var(--bdr);margin-top:10px;padding-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <span style="font-size:11px;color:#64748b">💾 Backup manual:</span>
+          <button class="btn b-gh b-sm" onclick="gdExport()">📤 Exportar JSON</button>
+          <input type="file" id="fGdImport" accept=".json" style="display:none" onchange="gdImport(this.files[0]);this.value=''"><button class="btn b-gh b-sm" onclick="document.getElementById('fGdImport').click()">📥 Importar JSON</button>
+        </div>
+      </div></div>
     </div>
 
 
@@ -1168,7 +1164,7 @@ const initMesFlags=()=>{
     const el=document.getElementById(containerId);if(!el)return;
     const _cmp=containerId==='v360MesFlags'||containerId==='homeMesFlags';
     const _fs=_cmp?'10px':'11px';const _gap=_cmp?'1px':'4px';
-    el.innerHTML='<label style="margin-right:4px;font-size:'+_fs+'"><input type="checkbox" class="mes-all" data-group="'+containerId+'" checked> Todos</label>'+MSH.map((m,i)=>'<label style="margin-right:'+_gap+';font-size:'+_fs+'"><input type="checkbox" class="mes-flag" data-group="'+containerId+'" value="'+(i+1)+'">' +m+'</label>').join('');
+    el.innerHTML='<label style="margin-right:4px;font-size:'+_fs+'"><input type="checkbox" class="mes-all" data-group="'+containerId+'" checked> Todos</label>'+MSH.map((m,i)=>'<label style="margin-right:'+_gap+';font-size:'+_fs+'"><input type="checkbox" class="mes-flag" data-group="'+containerId+'" value="'+(i+1)+'"> '+m+'</label>').join('');
     el.querySelector('.mes-all').addEventListener('change',function(){const cks=el.querySelectorAll('.mes-flag');cks.forEach(c=>c.checked=this.checked);triggerRender(containerId);});
     el.querySelectorAll('.mes-flag').forEach(c=>c.addEventListener('change',()=>{const all=el.querySelector('.mes-all');const cks=el.querySelectorAll('.mes-flag');all.checked=[...cks].every(c=>c.checked);triggerRender(containerId);}));
   });
@@ -2040,6 +2036,9 @@ document.getElementById('btnComR')?.addEventListener('click', () => {
 // ── Listener Retenção com flag ────────────────────────
 
 // ── Sincroniza com Drive ao iniciar ──────────────────
+(async () => {
+  await gdLoadConfig();
+})();
 
 
 
@@ -2085,13 +2084,106 @@ document.getElementById('btnComR')?.addEventListener('click', () => {
 
 // ══ GOOGLE DRIVE ══
 // Só precisa de CLIENT_ID (OAuth 2.0). Sem API Key.
-const GD = { flags: {}, ready: true };
-
-const gdLoadLocal = async () => {
-  const local = await iGet('meta', 'gdflags');
-  if (local && Object.keys(local).length > 0) { GD.flags = local; }
+const GD = {
+  CLIENT_ID: '',
+  SCOPE: 'https://www.googleapis.com/auth/drive.file',
+  FILE_NAME: 'bnq_hub_flags.json',
+  FILE_ID: null,
+  TOKEN: null,
+  flags: {},
+  ready: false,
 };
-const gdSave = async () => { await iSet('meta', 'gdflags', GD.flags); };
+
+const gdLoadGIS = () => new Promise(res => {
+  if (window.google && window.google.accounts) { res(); return; }
+  const sc = document.createElement('script');
+  sc.src = 'https://accounts.google.com/gsi/client';
+  sc.onload = res;
+  document.head.appendChild(sc);
+});
+
+const gdLogin = async () => {
+  if (!GD.CLIENT_ID) { alert('Configure o Client ID em Configuracoes.'); return; }
+  try {
+    await gdLoadGIS();
+    gdSetStatus('syncing', 'Aguardando autorizacao...');
+    const _tc = google.accounts.oauth2.initTokenClient({
+      client_id: GD.CLIENT_ID,
+      scope: GD.SCOPE,
+      callback: async (resp) => {
+        if (resp.error) { gdSetStatus('error', 'Erro: ' + (resp.error_description||resp.error)); return; }
+        GD.TOKEN = resp.access_token;
+        await iSet('meta', 'gdtoken', { token: GD.TOKEN, ts: Date.now() });
+        gdSetStatus('syncing', 'Conectando ao Drive...');
+        await gdSyncFlags();
+        gdSetStatus('ok', '☁️ Drive conectado');
+      },
+      error_callback: (err) => { gdSetStatus('error', 'Erro: '+(err.message||err.type||'popup bloqueado')); }
+    });
+    _tc.requestAccessToken({ prompt: 'consent' });
+  } catch(e) { gdSetStatus('error', 'Erro: ' + e.message); }
+};
+
+const gdLogout = async () => {
+  if (GD.TOKEN && window.google) google.accounts.oauth2.revoke(GD.TOKEN, ()=>{});
+  GD.TOKEN = null; GD.FILE_ID = null; GD.ready = false;
+  await iDel('meta', 'gdtoken');
+  gdSetStatus('off', 'Drive: desconectado');
+};
+
+const gdSetStatus = (state, msg) => {
+  const cors = { ok:'#16a34a', error:'#dc2626', syncing:'#d97706', off:'#9ca3af' };
+  const cor = cors[state] || '#9ca3af';
+  ['gdDot','gdDot2'].forEach(id=>{ const el=document.getElementById(id); if(el)el.style.background=cor; });
+  ['gdTxt','gdTxt2'].forEach(id=>{ const el=document.getElementById(id); if(el)el.textContent=msg; });
+  ['btnGdLogin','btnGdLoginCfg'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display=state==='ok'?'none':'inline-flex'; });
+  ['btnGdLogout','btnGdLogoutCfg'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display=state==='ok'?'inline-flex':'none'; });
+  const sdGd=document.getElementById('sd-gd'); if(sdGd) sdGd.querySelector('.d').style.background=cor;
+};
+
+const gdFindOrCreate = async () => {
+  const q = encodeURIComponent("name='"+GD.FILE_NAME+"' and trashed=false");
+  const r = await fetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id)&spaces=drive',
+    { headers: { Authorization: 'Bearer '+GD.TOKEN } });
+  const d = await r.json();
+  if (d.files && d.files.length > 0) { GD.FILE_ID = d.files[0].id; return; }
+  const bnd = 'bnqhub_bnd';
+  const meta = JSON.stringify({ name: GD.FILE_NAME, mimeType: 'application/json' });
+  const body = '--'+bnd+'\r\nContent-Type: application/json\r\n\r\n'+meta+
+    '\r\n--'+bnd+'\r\nContent-Type: application/json\r\n\r\n{}\r\n--'+bnd+'--';
+  const cr = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+    { method:'POST', headers:{ Authorization:'Bearer '+GD.TOKEN, 'Content-Type':'multipart/related; boundary='+bnd }, body });
+  const created = await cr.json();
+  GD.FILE_ID = created.id;
+};
+
+const gdReadFile = async () => {
+  const r = await fetch('https://www.googleapis.com/drive/v3/files/'+GD.FILE_ID+'?alt=media',
+    { headers: { Authorization: 'Bearer '+GD.TOKEN } });
+  if (!r.ok) return {};
+  try { return await r.json(); } catch(e) { return {}; }
+};
+
+const gdSave = async () => {
+  await iSet('meta', 'gdflags', GD.flags);
+  if (!GD.TOKEN || !GD.FILE_ID) return;
+  await fetch('https://www.googleapis.com/upload/drive/v3/files/'+GD.FILE_ID+'?uploadType=media',
+    { method:'PATCH', headers:{ Authorization:'Bearer '+GD.TOKEN, 'Content-Type':'application/json' }, body: JSON.stringify(GD.flags) });
+};
+
+const gdSyncFlags = async () => {
+  try {
+    await gdFindOrCreate();
+    const remote = await gdReadFile();
+    GD.flags = Object.assign({}, GD.flags, remote);
+    await iSet('meta', 'gdflags', GD.flags);
+    GD.ready = true;
+  } catch(err) {
+    console.error('[GD] Sync error:', err);
+    gdSetStatus('error', 'Erro ao sincronizar');
+  }
+};
+
 const gdToggle = async (nome) => {
   const key = normN(nome);
   const atual = GD.flags[key] && GD.flags[key].resolvido;
@@ -2099,23 +2191,26 @@ const gdToggle = async (nome) => {
   await gdSave();
   document.querySelectorAll('[data-gdkey="'+key+'"]').forEach(btn => {
     const res = GD.flags[key].resolvido;
-    btn.textContent = res ? '\u2705 Resolvido' : '\u25cb Pendente';
+    btn.textContent = res ? '✅ Resolvido' : '○ Pendente';
     btn.style.background = res ? '#dcfce7' : '#f1f5f9';
     btn.style.color = res ? '#166534' : '#475569';
     const tr = btn.closest('tr'); if (tr) tr.style.opacity = res ? '0.45' : '1';
   });
 };
+
 const gdGet = (nome) => GD.flags[normN(nome)] || { resolvido: false };
+
 const gdBtn = (nome) => {
   const key = normN(nome);
   const res = gdGet(nome).resolvido;
   const bg = res ? '#dcfce7' : '#f1f5f9';
   const cor = res ? '#166534' : '#475569';
   const bor = res ? '#bbf7d0' : '#e2e8f0';
-  const lbl = res ? '\u2705 Resolvido' : '\u25cb Pendente';
+  const lbl = res ? '✅ Resolvido' : '○ Pendente';
   const safe = nome.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-  return '<button data-gdkey="'+key+'" onclick="gdToggle(\''+safe+'\');" style="background:'+bg+';color:'+cor+';border:1px solid '+bor+';border-radius:4px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">'+lbl+'</button>';
+  return '<button data-gdkey="'+key+'" onclick="gdToggle(\''+ safe +'\')" style="background:'+bg+';color:'+cor+';border:1px solid '+bor+';border-radius:4px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">'+lbl+'</button>';
 };
+
 const gdExport = () => {
   const blob = new Blob([JSON.stringify(GD.flags,null,2)],{type:'application/json'});
   const url = URL.createObjectURL(blob);
@@ -2123,6 +2218,7 @@ const gdExport = () => {
   a.href=url;a.download='bnq_flags_backup.json';
   document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
 };
+
 const gdImport = (file) => {
   if(!file)return;
   const reader = new FileReader();
@@ -2131,84 +2227,51 @@ const gdImport = (file) => {
       const data = JSON.parse(e.target.result);
       GD.flags = Object.assign({},GD.flags,data);
       await gdSave();
-      alert('\u2705 '+Object.keys(data).length+' flags importados!');
+      alert('✅ '+Object.keys(data).length+' flags importados!');
     } catch(err){alert('Erro: '+err.message);}
   };
   reader.readAsText(file);
 };
-const gdSetStatus = (state, msg) => {
-  const cors={ok:'#16a34a',error:'#dc2626',syncing:'#d97706',off:'#9ca3af'};
-  const cor=cors[state]||'#9ca3af';
-  ['gdDot','gdDot2'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.background=cor;});
-  ['gdTxt','gdTxt2'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=msg;});
-  const sdGd=document.getElementById('sd-gd');if(sdGd)sdGd.querySelector('.d').style.background=cor;
+
+const gdConfigure = async () => {
+  const el = document.getElementById('gdClientId');
+  const cid = el && el.value.trim();
+  if (!cid) { alert('Informe o Client ID OAuth 2.0.'); return; }
+  GD.CLIENT_ID = cid;
+  await iSet('meta', 'gdconfig', { CLIENT_ID: cid });
+  if (el) el.style.borderColor = '#16a34a';
+  gdSetStatus('off', 'Client ID salvo — clique em Conectar');
+  ['btnGdLogin','btnGdLoginCfg'].forEach(id=>{ const btn=document.getElementById(id); if(btn) btn.style.display='inline-flex'; });
 };
+
 const gdLoadConfig = async () => {
-  await gdLoadLocal();
-  gdSetStatus('ok','\ud83d\udcbe '+Object.keys(GD.flags).length+' flags salvos localmente');
+  const cfg = await iGet('meta', 'gdconfig');
+  if (cfg && cfg.CLIENT_ID) {
+    GD.CLIENT_ID = cfg.CLIENT_ID;
+    const el = document.getElementById('gdClientId'); if (el) el.value = GD.CLIENT_ID;
+    ['btnGdLogin','btnGdLoginCfg'].forEach(id=>{ const btn=document.getElementById(id); if(btn) btn.style.display='inline-flex'; });
+    gdSetStatus('off', 'Client ID carregado — clique em Conectar');
+  }
+  const local = await iGet('meta', 'gdflags');
+  if (local && Object.keys(local).length > 0) { GD.flags = local; }
+  const saved = await iGet('meta', 'gdtoken');
+  if (saved && saved.token && (Date.now() - saved.ts) < 3500000) {
+    GD.TOKEN = saved.token;
+    gdSetStatus('syncing', 'Reconectando...');
+    gdSyncFlags().then(()=>gdSetStatus('ok','☁️ Drive reconectado')).catch(async()=>{
+      GD.TOKEN = null; await iDel('meta','gdtoken'); gdSetStatus('off','Token expirado — reconecte');
+    });
+  } else if (!cfg || !cfg.CLIENT_ID) {
+    gdSetStatus('off', 'Configure o Client ID para usar o Drive');
+  }
 };
+
 const gdLoadFlags = async () => {
-  await gdLoadLocal();
-  gdSetStatus('ok','\u2705 '+Object.keys(GD.flags).length+' flags carregados');
+  if (!GD.TOKEN) { await gdLoadConfig(); return; }
+  gdSetStatus('syncing', 'Sincronizando...');
+  await gdSyncFlags();
+  gdSetStatus('ok', '☁️ Drive conectado');
 };
-const gdLogin = async () => {
-  alert('\u2139\ufe0f Os flags s\u00e3o salvos automaticamente no seu navegador.\n\nUse Exportar/Importar para backup entre dispositivos.');
-};
-const gdLogout = async () => { gdSetStatus('off','Desconectado'); };
-const gdConfigure = async () => { gdSetStatus('ok','\ud83d\udcbe Flags salvos localmente'); };
-
-
-
-// ═══════════════════════════════════════════════════════
-// PATCH DE BUGS — aplicado sobre newcode_v2.js
-// Todas as funções substituídas; nenhuma nova dependência
-// ═══════════════════════════════════════════════════════
-
-// ── 1. parseCTCol: filtra nomes que começam com 20XX ────
-const parseCTCol = wb => {
-  const aba = wb.SheetNames.find(n => norm(n).includes('planilha1')) || wb.SheetNames[0];
-  const ws = wb.Sheets[aba];
-  if (!ws || !ws['!ref']) throw new Error('Aba não encontrada. Abas: ' + wb.SheetNames.join(', '));
-  const rawRows = XLSX.utils.sheet_to_json(ws, {defval:'', raw:true, cellDates:true, header:1});
-  const hdr = rawRows[0].map(h => norm(String(h || '')));
-  const fi = fn => hdr.findIndex(fn);
-  const idx = {
-    DATA:   fi(h => h === 'data'),
-    MES:    fi(h => h === 'mes' || h.includes('m\xeas')),
-    ANO:    fi(h => h === 'ano'),
-    NOME:   fi(h => h.includes('crianca') || h.includes('crian\xe7a') || h.includes('nome')),
-    TIPO:   fi(h => h.includes('tipo')),
-    PACOTE: fi(h => h.includes('pacote')),
-    QTDE:   fi(h => h === 'qtde' || h.includes('hora')),
-    VALOR:  fi(h => h === 'valor'),
-    TURNO:  fi(h => h.includes('turno')),
-    SALDO:  fi(h => h === 'saldo'),
-  };
-  if (idx.NOME < 0 || idx.ANO < 0) throw new Error('Colunas não encontradas: ' + hdr.slice(0,8).join('|'));
-  return rawRows.slice(1).map(row => {
-    const dataRaw = row[idx.DATA];
-    let dataStr = '';
-    if (dataRaw instanceof Date) dataStr = dataRaw.toISOString().substring(0, 10);
-    else if (typeof dataRaw === 'number') {
-      const d = new Date(new Date(1899,11,30).getTime() + dataRaw * 86400000);
-      dataStr = d.toISOString().substring(0, 10);
-    } else if (dataRaw) dataStr = String(dataRaw);
-    const mes = norm(String(row[idx.MES] || '')).substring(0, 3);
-    const ano = String(row[idx.ANO] || '').replace('.0','').trim();
-    const nome = (row[idx.NOME] || '').toString().trim();
-    return { DATA:dataStr, MES:mes, ANO:ano, NOME:nome,
-      TIPO:normTipo(row[idx.TIPO]), PACOTE:normPac(row[idx.PACOTE]),
-      QTDE:cl(row[idx.QTDE]), VALOR:cl(row[idx.VALOR]),
-      TURNO:normTur(row[idx.TURNO]), SALDO:cl(row[idx.SALDO]) };
-  }).filter(r => {
-    if (!r.ANO || !r.NOME || isNaN(parseInt(r.ANO))) return false;
-    // Filtra nomes que são anos (erro na base: 2024xxx, 2025xxx, 2026xxx)
-    if (/^20\d{2}/.test(r.NOME.trim())) return false;
-    return true;
-  });
-};
-
-// ── 2. mOpts com opção "Acumulado Ano" ──────────────────
 const mOpts = (t=true) => {
   const mesAtual = new Date().getMonth() + 1;
   const base = t ? [{v:'0',t:'Ano Todo'}, {v:'acc',t:'Acumulado (Jan→Atual)'}] : [];
