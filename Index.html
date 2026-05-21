@@ -216,7 +216,7 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
       <div><h2>Visão Geral</h2><p id="homeP">Importe as bases para visualizar os dados</p></div>
       <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
         <div class="fg"><label>Ano</label><select id="homeAno"><option value="">Todos os Anos</option></select></div>
-        <div class="fg"><label>Meses</label><div id="homeMesFlags" style="display:flex;flex-wrap:wrap;gap:2px;padding:4px 6px;background:#fff;border:1px solid var(--bdr);border-radius:var(--r2);min-width:200px"></div></div>
+        <div class="fg"><label>Meses</label><div id="homeMesFlags" style="display:flex;flex-wrap:wrap;gap:1px;padding:3px 5px;background:#fff;border:1px solid var(--bdr);border-radius:var(--r2);min-width:180px"></div></div>
         <button class="btn b-p b-sm" id="btnHomeRender">🔍 Atualizar</button>
       </div>
     </div>
@@ -247,7 +247,7 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
         <div class="ac" id="v360AC" style="display:none"></div>
       </div>
       <div class="fg"><label>Ano (opcional)</label><select id="v360FiltroAno"><option value="">Todos os anos</option></select></div>
-      <div class="fg"><label>Meses</label><div id="v360MesFlags" style="display:flex;flex-wrap:wrap;gap:1px;padding:3px 5px;background:#fff;border:1px solid var(--bdr);border-radius:var(--r2);min-width:180px"></div></div>
+      <div class="fg"><label>Meses</label><div id="v360MesFlags" style="display:flex;flex-wrap:wrap;gap:2px;padding:4px 6px;background:#fff;border:1px solid var(--bdr);border-radius:var(--r2);min-width:240px"></div></div>
       <button class="btn b-p" id="btnV360">🔍 Buscar</button>
     </div>
     <!-- Tabela resumo 360 -->
@@ -328,7 +328,7 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
         <div class="fg"><label>Turno</label><select id="ctGTur"><option value="">Todos</option><option>Manhã</option><option>Tarde</option></select></div>
         <div class="fg"><label>Situação</label><select id="ctGSit"><option value="">Todos</option><option value="critico">🔴 Crítico</option><option value="atencao">🟡 Atenção</option><option value="ok">🟢 OK</option><option value="inativo">⚪ Inativo</option></select></div>
         <div class="fg"><label>Ordenar</label><select id="ctGOrd"><option value="saldo">Menor saldo</option><option value="uso_d">Maior uso%</option><option value="uso_a">Menor uso%</option><option value="nome">Nome A→Z</option></select></div>
-        <button class="btn b-p" id="btnCtGestaoFiltrar">🔍 Filtrar</button>
+        <button class="btn b-p" onclick="renderCtGestao()">🔍 Filtrar</button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
         <div><div id="ctGL1" style="font-size:12px;font-weight:700;color:var(--p);padding:3px 10px;background:#e8f0f8;border-radius:6px;margin-bottom:7px">Ano 1</div><div class="kpis" id="ctGK1"></div></div>
@@ -452,7 +452,7 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
         <div class="fg"><label>Turno</label><select id="colGTur"><option value="">Todos</option><option>Manhã</option><option>Tarde</option></select></div>
         <div class="fg"><label>Situação</label><select id="colGSit"><option value="">Todos</option><option value="critico">🔴 Crítico</option><option value="atencao">🟡 Atenção</option><option value="ok">🟢 OK</option><option value="inativo">⚪ Inativo</option></select></div>
         <div class="fg"><label>Ordenar</label><select id="colGOrd"><option value="saldo">Menor saldo</option><option value="uso_d">Maior uso%</option><option value="nome">Nome A→Z</option></select></div>
-        <button class="btn b-p" id="btnColGestaoFiltrar">🔍 Filtrar</button>
+        <button class="btn b-p" onclick="renderColGestao()">🔍 Filtrar</button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
         <div><div id="colGL1" style="font-size:12px;font-weight:700;color:var(--p);padding:3px 10px;background:#e8f0f8;border-radius:6px;margin-bottom:7px">Ano 1</div><div class="kpis" id="colGK1"></div></div>
@@ -544,7 +544,7 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
       <div class="fl">
         <div class="fg"><label>Mês</label><select id="calMes"></select></div>
         <div class="fg"><label>Ano</label><select id="calAno"></select></div>
-        <button class="btn b-p b-sm" id="btnCalRender">📅 Exibir</button>
+        <button class="btn b-p b-sm" onclick="renderCal()">📅 Exibir</button>
       </div>
       <div id="calGrid" style="margin-top:12px"></div>
       <div style="overflow-x:auto" id="calCon"></div>
@@ -858,31 +858,32 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
       <input type="file" id="fLogo" accept="image/*" style="display:none">
       <button class="btn b-gh b-sm" onclick="document.getElementById('fLogo').click()">🖼️ Trocar logo</button>
     </div>
-    <!-- Google Drive Config -->
+        <!-- Flags Config -->
     <div style="margin-bottom:20px">
-      <div style="font-size:14px;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--bdr)">☁️ Google Drive — Flags "Resolvido"</div>
+      <div style="font-size:14px;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--bdr)">🚩 Flags "Resolvido" — Armazenamento Local</div>
       <div class="al al-i" style="margin-bottom:10px">
-        Os flags "Resolvido" ficam salvos no seu Google Drive em <b>bnq_hub_flags.json</b>. 
-        Sincronizam entre dispositivos e persistem entre importações.
-        Para criar credenciais: <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:var(--p)">console.cloud.google.com</a> → Credenciais → <b>OAuth 2.0 → Aplicativo Web</b> → ativar Drive API.
+        Os flags <b>"Resolvido"</b> são salvos automaticamente no seu navegador e <b>persistem entre importações de Excel</b>. Use os botões abaixo para fazer backup entre dispositivos.
       </div>
       <div class="cfg-g" style="margin-bottom:12px">
         <div class="ic">
-          <div class="ic-h"><div class="ic-ico">🔑</div><div><div class="ic-t">Credenciais OAuth</div><div class="ic-s">Client ID e API Key do seu projeto Google Cloud</div></div></div>
-          <div class="fg"><label>Client ID (OAuth 2.0)</label><input type="text" id="gdClientId" placeholder="xxxxx.apps.googleusercontent.com" style="width:100%;padding:6px 8px;border:1px solid var(--bdr);border-radius:var(--r2);font-size:12px"></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn b-p b-sm" id="btnGdConfigure">💾 Salvar Client ID</button>
-            <button class="btn b-ok b-sm" id="btnGdLoginCfg" style="display:none">🔗 Conectar ao Google Drive</button>
-            <button class="btn b-err b-sm" id="btnGdLogoutCfg" style="display:none">⛔ Desconectar</button>
-            <button class="btn b-gh b-sm" id="btnGdSync" title="Recarregar flags do Drive">🔄 Sincronizar</button>
+          <div class="ic-h"><div class="ic-ico">🚩</div><div><div class="ic-t">Backup de Flags</div><div class="ic-s">Exportar/importar flags entre dispositivos</div></div></div>
+          <div class="ic-st" style="margin-top:4px">
+            <div class="s-d ok" id="gdDot" style="background:#16a34a"></div>
+            <div class="ic-in" id="gdTxt2">💾 Flags salvos localmente</div>
           </div>
-          <div class="ic-st" style="margin-top:8px">
-            <div class="s-d" id="gdDot" style="background:#9ca3af"></div>
-            <div class="ic-in" id="gdTxt2">Não configurado</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+            <button class="btn b-p b-sm" onclick="gdExport()">📤 Exportar flags (JSON)</button>
+            <input type="file" id="fGdImport" accept=".json" style="display:none" onchange="gdImport(this.files[0]);this.value=''">
+            <button class="btn b-gh b-sm" onclick="document.getElementById('fGdImport').click()">📥 Importar flags (JSON)</button>
+            <button class="btn b-ok b-sm" id="btnGdSync" onclick="gdLoadFlags()">🔄 Recarregar flags</button>
+          </div>
+          <div style="font-size:11px;color:#64748b;margin-top:8px">
+            💡 <b>Dica:</b> Exporte os flags regularmente para backup. Para usar em outro dispositivo, importe o arquivo JSON exportado.
           </div>
         </div>
       </div>
     </div>
+
 
     <div>
       <div style="font-size:14px;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--bdr)">🗑️ Dados Salvos</div>
@@ -1051,50 +1052,6 @@ const parseFlx = wb => {
   }).filter(r => r.ANO && !isNaN(parseInt(r.ANO)) && r.MES_NUM >= 1 && r.MES_NUM <= 12);
 };
 
-// ── 1. parseCTCol: filtra nomes que começam com 20XX ────
-const parseCTCol = wb => {
-  const aba = wb.SheetNames.find(n => norm(n).includes('planilha1')) || wb.SheetNames[0];
-  const ws = wb.Sheets[aba];
-  if (!ws || !ws['!ref']) throw new Error('Aba não encontrada. Abas: ' + wb.SheetNames.join(', '));
-  const rawRows = XLSX.utils.sheet_to_json(ws, {defval:'', raw:true, cellDates:true, header:1});
-  const hdr = rawRows[0].map(h => norm(String(h || '')));
-  const fi = fn => hdr.findIndex(fn);
-  const idx = {
-    DATA:   fi(h => h === 'data'),
-    MES:    fi(h => h === 'mes' || h.includes('m\xeas')),
-    ANO:    fi(h => h === 'ano'),
-    NOME:   fi(h => h.includes('crianca') || h.includes('crian\xe7a') || h.includes('nome')),
-    TIPO:   fi(h => h.includes('tipo')),
-    PACOTE: fi(h => h.includes('pacote')),
-    QTDE:   fi(h => h === 'qtde' || h.includes('hora')),
-    VALOR:  fi(h => h === 'valor'),
-    TURNO:  fi(h => h.includes('turno')),
-    SALDO:  fi(h => h === 'saldo'),
-  };
-  if (idx.NOME < 0 || idx.ANO < 0) throw new Error('Colunas não encontradas: ' + hdr.slice(0,8).join('|'));
-  return rawRows.slice(1).map(row => {
-    const dataRaw = row[idx.DATA];
-    let dataStr = '';
-    if (dataRaw instanceof Date) dataStr = dataRaw.toISOString().substring(0, 10);
-    else if (typeof dataRaw === 'number') {
-      const d = new Date(new Date(1899,11,30).getTime() + dataRaw * 86400000);
-      dataStr = d.toISOString().substring(0, 10);
-    } else if (dataRaw) dataStr = String(dataRaw);
-    const mes = norm(String(row[idx.MES] || '')).substring(0, 3);
-    const ano = String(row[idx.ANO] || '').replace('.0','').trim();
-    const nome = (row[idx.NOME] || '').toString().trim();
-    return { DATA:dataStr, MES:mes, ANO:ano, NOME:nome,
-      TIPO:normTipo(row[idx.TIPO]), PACOTE:normPac(row[idx.PACOTE]),
-      QTDE:cl(row[idx.QTDE]), VALOR:cl(row[idx.VALOR]),
-      TURNO:normTur(row[idx.TURNO]), SALDO:cl(row[idx.SALDO]) };
-  }).filter(r => {
-    if (!r.ANO || !r.NOME || isNaN(parseInt(r.ANO))) return false;
-    // Filtra nomes que são anos (erro na base: 2024xxx, 2025xxx, 2026xxx)
-    if (/^20\d{2}/.test(r.NOME.trim())) return false;
-    return true;
-  });
-};
-
 const importBase = async (file, tipo) => {
   const reader = new FileReader();
   reader.onerror = () => alert('Erro ao ler arquivo.');
@@ -1140,6 +1097,7 @@ const updateImpUI = tipo => {
 };
 
 const carregarTudo = async () => {
+  await gdLoadConfig();
   for (const t of ['ct','col','fest','flx']) {
     const d = await iGet('bases', t);
     const m = await iGet('meta', t);
@@ -1150,412 +1108,6 @@ const carregarTudo = async () => {
 };
 
 const sameAno=(rAno,filtroAno)=>String(rAno).trim()===String(filtroAno).trim();
-const getGrpAgr=(t='')=>{
-  const s=norm(t||'');
-  if(s.startsWith('pacote'))return'Contraturno';
-  if(s.includes('colon'))return'Colônias';
-  if(s.includes('festinha'))return'Festinhas';
-  if(s.includes('aluguel'))return'Aluguel';
-  if(s.includes('evento'))return'Eventos';
-  if(s.includes('oficina'))return'Oficinas';
-  return'Outros';
-};
-const GD = {
-  CLIENT_ID: '',
-  SCOPE: 'https://www.googleapis.com/auth/drive.file',
-  FILE_NAME: 'bnq_hub_flags.json',
-  FILE_ID: null,
-  TOKEN: null,
-  flags: {},
-  ready: false,
-};
-const gdLoadGIS = () => new Promise(res => {
-  if (window.google && window.google.accounts) { res(); return; }
-  const sc = document.createElement('script');
-  sc.src = 'https://accounts.google.com/gsi/client';
-  sc.onload = res;
-  document.head.appendChild(sc);
-});
-const gdLogin = async () => {
-  if (!GD.CLIENT_ID) { alert('Configure o Client ID em ⚙️ Configurações → Google Drive.'); return; }
-  try {
-    await gdLoadGIS();
-  } catch(e) { gdSetStatus('error', 'Erro ao carregar Google Identity Services: ' + e.message); return; }
-  try {
-  const _tc = google.accounts.oauth2.initTokenClient({
-    client_id: GD.CLIENT_ID,
-    scope: GD.SCOPE,
-    callback: async (resp) => {
-      if (resp.error) { gdSetStatus('error', 'Erro: ' + (resp.error_description||resp.error)); return; }
-      GD.TOKEN = resp.access_token;
-      await iSet('meta', 'gdtoken', { token: GD.TOKEN, ts: Date.now() });
-      gdSetStatus('syncing', 'Conectando...');
-      await gdSyncFlags();
-      gdSetStatus('ok', '☁️ Drive conectado');
-    },
-    error_callback: (err) => { gdSetStatus('error', 'Erro: '+(err.message||err.type||'popup bloqueado')); }
-  });
-  _tc.requestAccessToken({ prompt: 'consent' });
-  } catch(e) { gdSetStatus('error', 'Erro: ' + e.message); }
-};
-const gdLogout = async () => {
-  if (GD.TOKEN && window.google) google.accounts.oauth2.revoke(GD.TOKEN, ()=>{});
-  GD.TOKEN = null; GD.FILE_ID = null; GD.ready = false;
-  await iDel('meta', 'gdtoken');
-  gdSetStatus('off', 'Drive: desconectado');
-};
-const gdSetStatus = (state, msg) => {
-  const cors = { ok:'#16a34a', error:'#dc2626', syncing:'#d97706', off:'#9ca3af' };
-  const cor = cors[state] || '#9ca3af';
-  ['gdDot','gdDot2'].forEach(id=>{ const el=document.getElementById(id); if(el)el.style.background=cor; });
-  ['gdTxt','gdTxt2'].forEach(id=>{ const el=document.getElementById(id); if(el)el.textContent=msg; });
-  // Suporta ambos os IDs (sidebar e config)
-  ['btnGdLogin','btnGdLoginCfg'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display = state==='ok'?'none':'inline-flex'; });
-  ['btnGdLogout','btnGdLogoutCfg'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display = state==='ok'?'inline-flex':'none'; });
-  const sdGd=document.getElementById('sd-gd'); if(sdGd) sdGd.querySelector('.d').style.background=cor;
-};
-const gdFindOrCreate = async () => {
-  const q = encodeURIComponent("name='"+GD.FILE_NAME+"' and trashed=false");
-  const r = await fetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id)&spaces=drive',
-    { headers: { Authorization: 'Bearer '+GD.TOKEN } });
-  const d = await r.json();
-  if (d.files && d.files.length > 0) { GD.FILE_ID = d.files[0].id; return; }
-  const bnd = 'bnqhub_bnd';
-  const meta = JSON.stringify({ name: GD.FILE_NAME, mimeType: 'application/json' });
-  const body = '--'+bnd+'\r\nContent-Type: application/json\r\n\r\n'+meta+
-    '\r\n--'+bnd+'\r\nContent-Type: application/json\r\n\r\n{}\r\n--'+bnd+'--';
-  const cr = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
-    { method:'POST', headers:{ Authorization:'Bearer '+GD.TOKEN, 'Content-Type':'multipart/related; boundary='+bnd }, body });
-  const created = await cr.json();
-  GD.FILE_ID = created.id;
-};
-const gdReadFile = async () => {
-  const r = await fetch('https://www.googleapis.com/drive/v3/files/'+GD.FILE_ID+'?alt=media',
-    { headers: { Authorization: 'Bearer '+GD.TOKEN } });
-  if (!r.ok) return {};
-  try { return await r.json(); } catch(e) { return {}; }
-};
-const gdSave = async () => {
-  await iSet('meta', 'gdflags', GD.flags);
-  if (!GD.TOKEN || !GD.FILE_ID) return;
-  await fetch('https://www.googleapis.com/upload/drive/v3/files/'+GD.FILE_ID+'?uploadType=media',
-    { method:'PATCH', headers:{ Authorization:'Bearer '+GD.TOKEN, 'Content-Type':'application/json' }, body: JSON.stringify(GD.flags) });
-};
-const gdSyncFlags = async () => {
-  try {
-    await gdFindOrCreate();
-    const remote = await gdReadFile();
-    GD.flags = Object.assign({}, GD.flags, remote);
-    await iSet('meta', 'gdflags', GD.flags);
-    GD.ready = true;
-    console.log('[GD] Flags sincronizados:', Object.keys(GD.flags).length);
-  } catch(err) {
-    console.error('[GD] Sync error:', err);
-    gdSetStatus('error', 'Erro ao sincronizar');
-  }
-};
-const gdToggle = async (nome) => {
-  const key = normN(nome);
-  const atual = GD.flags[key] && GD.flags[key].resolvido;
-  GD.flags[key] = { nome, resolvido: !atual, ts: new Date().toISOString() };
-  await gdSave();
-  document.querySelectorAll('[data-gdkey="'+key+'"]').forEach(btn => {
-    const res = GD.flags[key].resolvido;
-    btn.textContent = res ? '✅ Resolvido' : '○ Pendente';
-    btn.style.background = res ? '#dcfce7' : '#f1f5f9';
-    btn.style.color = res ? '#166534' : '#475569';
-    const tr = btn.closest('tr'); if (tr) tr.style.opacity = res ? '0.45' : '1';
-  });
-};
-const gdGet = (nome) => GD.flags[normN(nome)] || { resolvido: false };
-const gdBtn = (nome) => {
-  const key = normN(nome);
-  const res = gdGet(nome).resolvido;
-  const bg  = res ? '#dcfce7' : '#f1f5f9';
-  const cor = res ? '#166534' : '#475569';
-  const bor = res ? '#bbf7d0' : '#e2e8f0';
-  const lbl = res ? '✅ Resolvido' : '○ Pendente';
-  const safe = nome.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-  return '<button data-gdkey="'+key+'"'
-    +' onclick="gdToggle(\''+safe+'\')";'
-    +' style="background:'+bg+';color:'+cor+';border:1px solid '+bor
-    +';border-radius:4px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">'
-    +lbl+'</button>';
-};
-const gdConfigure = async () => {
-  const el = document.getElementById('gdClientId');
-  const cid = el && el.value.trim();
-  if (!cid) { alert('Informe o Client ID OAuth 2.0.'); return; }
-  GD.CLIENT_ID = cid;
-  await iSet('meta', 'gdconfig', { CLIENT_ID: cid });
-  if (el) el.style.borderColor = '#16a34a';
-  gdSetStatus('off', 'Client ID salvo — clique em Conectar');
-  ['btnGdLogin','btnGdLoginCfg'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='inline-flex'; });
-};
-const gdLoadConfig = async () => {
-  const cfg = await iGet('meta', 'gdconfig');
-  if (cfg && cfg.CLIENT_ID) {
-    GD.CLIENT_ID = cfg.CLIENT_ID;
-    const el = document.getElementById('gdClientId'); if (el) el.value = GD.CLIENT_ID;
-    ['btnGdLogin','btnGdLoginCfg'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='inline-flex'; });
-    gdSetStatus('off', 'Client ID carregado — clique em Conectar');
-  }
-  const local = await iGet('meta', 'gdflags');
-  if (local && Object.keys(local).length > 0) { GD.flags = local; }
-  const saved = await iGet('meta', 'gdtoken');
-  if (saved && saved.token && (Date.now() - saved.ts) < 3500000) {
-    GD.TOKEN = saved.token;
-    gdSetStatus('syncing', 'Reconectando...');
-    gdSyncFlags().then(()=>gdSetStatus('ok','☁️ Drive reconectado')).catch(async()=>{
-      GD.TOKEN = null; await iDel('meta','gdtoken'); gdSetStatus('off','Token expirado — reconecte');
-    });
-  }
-};
-
-
-
-// ═══════════════════════════════════════════════════════
-// PATCH DE BUGS — aplicado sobre newcode_v2.js
-// Todas as funções substituídas; nenhuma nova dependência
-// ═══════════════════════════════════════════════════════
-
-
-// ── 2. mOpts com opção "Acumulado Ano" ──────────────────
-const mOpts = (t=true) => {
-  const mesAtual = new Date().getMonth() + 1;
-  const base = t ? [{v:'0',t:'Ano Todo'}, {v:'acc',t:'Acumulado (Jan→Atual)'}] : [];
-  return [...base, ...MESES.map((m,i) => ({v:String(i+1), t:m}))];
-};
-
-// ── 3. renderFest CORRIGIDO ──────────────────────────────
-// - Pipeline Reserva: só datas a partir de hoje
-// - Pipeline Pago: ordena menor→maior data, só futuras/próximas
-// - Ticket Médio por Modelo: usa todos os dados do ANO (não só mês filtrado)
-// - Faturamento/Ticket reagem ao mês selecionado
-// - Acumulado Ano no filtro de mês
-const renderFest = () => {
-  const ano   = document.getElementById('festAno')?.value; if (!ano) return;
-  const mesV  = document.getElementById('festMes')?.value || '0';
-  const hoje  = new Date();
-  const mesAtual = hoje.getMonth() + 1;
-  // Determina range de meses para filtro financeiro
-  let mesInicio = 1, mesFim = 12;
-  if (mesV === '0')   { mesInicio=1; mesFim=12; }
-  else if (mesV === 'acc') { mesInicio=1; mesFim=mesAtual; }
-  else { mesInicio=parseInt(mesV); mesFim=parseInt(mesV); }
-  // d = dados filtrados pelo range de meses
-  const d = DB.fest.filter(r => sameAno(r.ANO,ano) && r.MES_NUM>=mesInicio && r.MES_NUM<=mesFim);
-  // todos = todos do ano (para pipeline e ticket modelo)
-  const todos = DB.fest.filter(r => sameAno(r.ANO,ano));
-  if (!CH['fec_i']) {
-    mkC('fecSt','doughnut'); mkC('fecFat','bar'); mkC('fecTur','doughnut');
-    mkC('fecMod','bar',{indexAxis:'y'}); mkC('fecTick','bar'); mkC('fecInad','bar');
-    CH['fec_i'] = true;
-  }
-  const total=d.length, pago=d.filter(r=>r.STATUS==='Pago 100%').length;
-  const pag=d.filter(r=>r.STATUS==='Pagando').length, res=d.filter(r=>r.STATUS==='Reserva').length;
-  // Faturamento via fluxo filtrado pelo range de meses
-  const mesList = Array.from({length:mesFim-mesInicio+1},(_,i)=>mesInicio+i);
-  const fatFlxFe = filFlx(ano, mesList.length<12?mesList:[], 'Entrada')
-    .filter(r => norm(r.TIPO_RECEITA||'').includes('festinha'));
-  const fatFlxM = Array(12).fill(0);
-  fatFlxFe.forEach(r => {
-    const m = typeof r.MES_NUM==='number'?r.MES_NUM:parseInt(r.MES_NUM||0);
-    if (m>=1&&m<=12) fatFlxM[m-1] += r.VALOR;
-  });
-  const fatTotal = fatFlxFe.reduce((s,r)=>s+r.VALOR, 0);
-  const fat = fatTotal>0 ? fatTotal : d.filter(r=>r.STATUS==='Pago 100%').reduce((s,r)=>s+r.VALOR_TOTAL,0);
-  const tick = pago ? fat/pago : 0;
-  const inad = d.filter(r=>r.SALDO_PAGAR>0).reduce((s,r)=>s+r.SALDO_PAGAR,0);
-  document.getElementById('feKpis').innerHTML =
-    '<div class="kpi"><div class="lb">Total festas</div><div class="vl">'+total+'</div></div>'+
-    '<div class="kpi ok"><div class="lb">Pagas 100%</div><div class="vl">'+pago+'</div></div>'+
-    '<div class="kpi w"><div class="lb">Reservas</div><div class="vl">'+res+'</div></div>'+
-    '<div class="kpi pur"><div class="lb">Faturamento</div><div class="vl">'+fmt(fat)+'</div></div>'+
-    '<div class="kpi"><div class="lb">Ticket médio</div><div class="vl">'+fmt(tick)+'</div></div>'+
-    '<div class="kpi err"><div class="lb">Inadimplência</div><div class="vl">'+fmt(inad)+'</div></div>';
-  updC('fecSt',['Pago 100%','Pagando','Reserva'],[{data:[pago,pag,res],backgroundColor:['#16a34a','#2563eb','#9ca3af']}]);
-  updC('fecFat',MSH,[{label:'Faturamento (Fluxo)',data:fatFlxM,backgroundColor:'#db2777'}],scY(fmt));
-  const tM=d.filter(r=>r.TURNO==='Manhã').length,tT=d.filter(r=>r.TURNO==='Tarde').length;
-  updC('fecTur',['Manhã','Tarde'],[{data:[tM,tT],backgroundColor:['#60a5fa','#f59e0b']}]);
-  const modMap = d.filter(r=>r.MODELO).reduce((acc,r)=>{acc[r.MODELO]=(acc[r.MODELO]||0)+1;return acc;},{});
-  const modS = Object.entries(modMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  updC('fecMod',modS.map(e=>e[0]),[{label:'Festas',data:modS.map(e=>e[1]),backgroundColor:'#db2777',borderRadius:4}]);
-  // Pipeline — usa TODOS do ano
-  document.getElementById('piR').textContent=todos.filter(r=>r.STATUS==='Reserva').length;
-  document.getElementById('piP').textContent=todos.filter(r=>r.STATUS==='Pagando').length;
-  document.getElementById('piPg').textContent=todos.filter(r=>r.STATUS==='Pago 100%').length;
-  const mkPipe=(id,items)=>{
-    document.getElementById(id).innerHTML=items.slice(0,25).map(r=>
-      '<div class="pi"><div class="pi-n">'+r.NOME+'</div>'+
-      '<div class="pi-m">'+(r.DATA_FESTA?fmtDate(r.DATA_FESTA):'')+' · '+(r.TURNO||'')+' · '+(r.MODELO||r.TIPO_FESTA||'')+'</div>'+
-      (r.VALOR_TOTAL>0?'<div class="pi-v">'+fmt(r.VALOR_TOTAL)+'</div>':'')+
-      '</div>'
-    ).join('');
-  };
-  // Reservas: apenas a partir de hoje, ordenadas por data
-  const reservasFuturas = todos.filter(r=>r.STATUS==='Reserva'&&r.DATA_FESTA&&new Date(r.DATA_FESTA)>=hoje)
-    .sort((a,b)=>new Date(a.DATA_FESTA)-new Date(b.DATA_FESTA));
-  mkPipe('pipeR', reservasFuturas);
-  // Pago: próximas festinhas (data >= hoje), ordem crescente
-  const pagoProximas = todos.filter(r=>r.STATUS==='Pago 100%'&&r.DATA_FESTA&&new Date(r.DATA_FESTA)>=hoje)
-    .sort((a,b)=>new Date(a.DATA_FESTA)-new Date(b.DATA_FESTA));
-  mkPipe('pipeP', pagoProximas);
-  // Pagando: próximas, ordem crescente
-  const pagandoProximas = todos.filter(r=>r.STATUS==='Pagando'&&r.DATA_FESTA)
-    .sort((a,b)=>new Date(a.DATA_FESTA)-new Date(b.DATA_FESTA));
-  mkPipe('pipePg', pagandoProximas);
-  // Financeiro
-  document.getElementById('feFinK').innerHTML=
-    '<div class="kpi pur"><div class="lb">Faturamento (Fluxo)</div><div class="vl">'+fmt(fat)+'</div></div>'+
-    '<div class="kpi ok"><div class="lb">Ticket médio</div><div class="vl">'+fmt(tick)+'</div></div>'+
-    '<div class="kpi err"><div class="lb">Inadimplência</div><div class="vl">'+fmt(inad)+'</div></div>'+
-    '<div class="kpi"><div class="lb">Com saldo</div><div class="vl">'+d.filter(r=>r.SALDO_PAGAR>0).length+'</div></div>';
-  // Ticket Médio por Modelo — usa TODOS do ano (não só mês filtrado)
-  const modMapAll = todos.filter(r=>r.MODELO).reduce((acc,r)=>{acc[r.MODELO]=(acc[r.MODELO]||0)+1;return acc;},{});
-  const tickFe = Object.entries(modMapAll).map(([m]) => {
-    const fs = todos.filter(r=>r.MODELO===m&&r.STATUS==='Pago 100%');
-    const t = fs.length ? fs.reduce((s,r)=>s+r.VALOR_TOTAL,0)/fs.length : 0;
-    return {m, t};
-  }).filter(e=>e.t>0).sort((a,b)=>b.t-a.t).slice(0,8);
-  updC('fecTick',tickFe.map(e=>e.m),[{label:'Ticket',data:tickFe.map(e=>e.t),backgroundColor:'#db2777',borderRadius:4}],scY(fmt));
-  const inadL = d.filter(r=>r.SALDO_PAGAR>0).sort((a,b)=>b.SALDO_PAGAR-a.SALDO_PAGAR);
-  updC('fecInad',inadL.slice(0,10).map(r=>r.NOME.split(' ')[0]),[{label:'Saldo',data:inadL.slice(0,10).map(r=>r.SALDO_PAGAR),backgroundColor:'#dc2626',borderRadius:4}],scY(fmt));
-  document.getElementById('feTbI').innerHTML='<thead><tr><th>#</th><th>Criança</th><th>Contratante</th><th>Telefone</th><th>Data Festa</th><th>Status</th><th>Valor Total</th><th>Saldo a Pagar</th><th><label style=\"cursor:pointer;font-weight:600\"><input type=\"checkbox\" id=\"chkFeTbISoRes\"> Só pendentes</label></th></tr></thead><tbody>'+inadL.filter(r=>!document.getElementById('chkFeTbISoRes')?.checked||!gdGet(r.NOME).resolvido).map((r,i)=>'<tr style="opacity:'+(gdGet(r.NOME).resolvido?'0.45':'1')+'"><td>'+(i+1)+'</td><td style="font-weight:700">'+r.NOME+'</td><td>'+r.CONTRATANTE+'</td><td>'+r.TELEFONE+'</td><td class="c">'+fmtDate(r.DATA_FESTA)+'</td><td><span class="ba ba-w">'+r.STATUS+'</span></td><td class="r">'+fmt(r.VALOR_TOTAL)+'</td><td class="r" style="color:#dc2626;font-weight:700">'+fmt(r.SALDO_PAGAR)+'</td><td>'+gdBtn(r.NOME)+'</td></tr>').join('')+'</tbody>';
-};
-
-// ── 4. renderCal CORRIGIDO — verifica container ─────────
-const renderCal = () => {
-  const mes=parseInt(document.getElementById('calMes')?.value||0);
-  const ano=parseInt(document.getElementById('calAno')?.value||0);
-  if(!mes||!ano) return;
-  const container = document.getElementById('calGrid') || document.getElementById('calCanvas');
-  if (!container) { console.warn('[renderCal] Container calGrid não encontrado'); return; }
-  const pD=new Date(ano,mes-1,1).getDay(), dias=new Date(ano,mes,0).getDate();
-  const fests=DB.fest.filter(r=>r.DATA_FESTA&&new Date(r.DATA_FESTA).getMonth()+1===mes&&new Date(r.DATA_FESTA).getFullYear()===ano);
-  const fPD={};
-  fests.forEach(r=>{const d=new Date(r.DATA_FESTA).getDate();if(!fPD[d])fPD[d]=[];fPD[d].push(r);});
-  const dias_semana=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-  let h='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:12px">'+
-    dias_semana.map(d=>'<div style="text-align:center;font-weight:700;color:var(--p);padding:4px">'+d+'</div>').join('');
-  for(let i=0;i<pD;i++) h+='<div></div>';
-  for(let d=1;d<=dias;d++){
-    const fs=fPD[d]||[];
-    const hasF=fs.length>0;
-    h+='<div style="border:1px solid '+(hasF?'var(--p)':'var(--bdr)')+';border-radius:6px;padding:6px 4px;min-height:60px;background:'+(hasF?'#eff6ff':'')+'">'+
-      '<div style="font-weight:700;font-size:13px;color:'+(hasF?'var(--p)':'')+'">'+d+'</div>'+
-      fs.map(f=>'<div style="font-size:10px;background:var(--p);color:#fff;border-radius:3px;padding:2px 4px;margin-top:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" title="'+f.NOME+' — '+f.TURNO+' — '+f.STATUS+'">'+f.NOME.split(' ')[0]+' '+f.TURNO.substring(0,1)+'</div>').join('')+
-      '</div>';
-  }
-  h+='</div>';
-  container.innerHTML=h;
-};
-
-// ── 5. Listeners Festinhas CORRIGIDOS ───────────────────
-
-// Clientes recorrentes — opção "Todos os anos"
-document.getElementById('btnFeR')?.addEventListener('click', () => {
-  const anoSel = document.getElementById('feCRAno').value;
-  const todosAnos = (anoSel === 'todos');
-  const anos = [...new Set(DB.fest.map(r=>r.ANO).filter(Boolean))].sort();
-  if (!todosAnos) {
-    // Modo: recorrentes no ano selecionado que também festejaram em outros anos
-    const nomesAno = new Set(DB.fest.filter(r=>sameAno(r.ANO,anoSel)).map(r=>normN(r.NOME)));
-    const rec=[], vis=new Set();
-    DB.fest.filter(r=>!sameAno(r.ANO,anoSel)&&r.NOME).forEach(r=>{
-      const nn=normN(r.NOME);
-      if(nomesAno.has(nn)&&!vis.has(nn)){
-        vis.add(nn);
-        const hist=DB.fest.filter(f=>normN(f.NOME)===nn);
-        const anosFeitos=[...new Set(hist.map(f=>f.ANO))].sort();
-        rec.push({nome:r.NOME,qtd:hist.length,anos:anosFeitos.join(', '),tel:r.TELEFONE||r.CONTRATANTE||'—'});
-      }
-    });
-    rec.sort((a,b)=>b.qtd-a.qtd);
-    document.getElementById('feCRTb').innerHTML='<thead><tr><th>#</th><th>Criança</th><th>Anos com BnQ</th><th>Total festas</th><th>Contato</th></tr></thead><tbody>'+
-      rec.map((r,i)=>'<tr><td>'+(i+1)+'</td><td style="font-weight:700">'+r.nome+'</td><td>'+r.anos+'</td><td class="c">'+r.qtd+'</td><td>'+r.tel+'</td></tr>').join('')+'</tbody>';
-  } else {
-    // Todos os anos: mostra quem festejou em 2+ anos diferentes
-    const por={};
-    DB.fest.filter(r=>r.NOME).forEach(r=>{
-      const nn=normN(r.NOME);
-      if(!por[nn]) por[nn]={nome:r.NOME,anos:new Set(),tel:r.TELEFONE||r.CONTRATANTE||'—'};
-      por[nn].anos.add(r.ANO);
-    });
-    const rec=Object.values(por).filter(c=>c.anos.size>=2).map(c=>({
-      nome:c.nome, qtd:c.anos.size, anos:[...c.anos].sort().join(', '), tel:c.tel
-    })).sort((a,b)=>b.qtd-a.qtd);
-    document.getElementById('feCRTb').innerHTML='<thead><tr><th>#</th><th>Criança</th><th>Anos com BnQ</th><th>Total anos</th><th>Contato</th></tr></thead><tbody>'+
-      rec.map((r,i)=>'<tr><td>'+(i+1)+'</td><td style="font-weight:700">'+r.nome+'</td><td>'+r.anos+'</td><td class="c" style="color:#16a34a;font-weight:700">'+r.qtd+'</td><td>'+r.tel+'</td></tr>').join('')+'</tbody>';
-  }
-});
-
-// Clientes que Pararam — com botão de mensagem WhatsApp
-document.getElementById('btnFeD')?.addEventListener('click', () => {
-  const anoRef = document.getElementById('feDAno').value;
-  const nomesAno = new Set(DB.fest.filter(r=>sameAno(r.ANO,anoRef)).map(r=>normN(r.NOME)));
-  const dorm=[], vis=new Set();
-  DB.fest.filter(r=>!sameAno(r.ANO,anoRef)&&r.NOME).forEach(r=>{
-    const nn=normN(r.NOME);
-    if(!nomesAno.has(nn)&&!vis.has(nn)){
-      vis.add(nn);
-      const hist=DB.fest.filter(f=>normN(f.NOME)===nn);
-      const uAno=Math.max(...hist.map(f=>parseInt(f.ANO)||0));
-      const tel = hist.find(f=>f.TELEFONE)?.TELEFONE || hist.find(f=>f.CONTRATANTE)?.CONTRATANTE || '—';
-      dorm.push({nome:r.NOME, uAno, qtd:hist.length, tel});
-    }
-  });
-  dorm.sort((a,b)=>b.uAno-a.uAno);
-  const msgWpp = (nome) => {
-    const txt = 'Olá!! o aniversário de "'+nome+'" está chegando e nós do BNQ queremos muuuito estar presente neste ano, assim como já comemoramos juntos com muita diversão e encantamento. O que acha de aproveitar a condição especial para quem já fez festinha conosco? Responde com QUERO que te enviaremos a proposta personalizada!';
-    const enc = btoa(unescape(encodeURIComponent(txt)));
-    return '<button class=\"btn-copiar-msg\" data-msg=\"'+enc+'\" style=\"background:#25d366;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer\">📋 Copiar msg</button>';
-  };
-  document.getElementById('feDTb').innerHTML='<thead><tr><th>#</th><th>Criança</th><th>Último ano</th><th>Total festas</th><th>Contato</th><th>Últ.CT</th><th>Últ.CLF</th><th>Mensagem</th><th><label style=\"cursor:pointer;font-weight:600\"><input type=\"checkbox\" id=\"chkFeDSoRes\"> Só pendentes</label></th></tr></thead><tbody>'+
-    dorm.filter(r=>!document.getElementById('chkFeDSoRes')?.checked||!gdGet(r.nome).resolvido).map((r,i)=>{
-      const uCT=DB.ct.filter(f=>normN(f.NOME)===normN(r.nome)&&f.TIPO==='Realizado'&&f.DATA).sort((a,b)=>new Date(b.DATA)-new Date(a.DATA))[0];
-      const uCLF=DB.col.filter(f=>normN(f.NOME)===normN(r.nome)&&f.TIPO==='Realizado'&&f.DATA).sort((a,b)=>new Date(b.DATA)-new Date(a.DATA))[0];
-      return'<tr style="opacity:'+(gdGet(r.nome).resolvido?'0.45':'1')+'"><td>'+(i+1)+'</td><td style="font-weight:700">'+r.nome+'</td><td class="c">'+r.uAno+'</td><td class="c">'+r.qtd+'</td><td>'+r.tel+'</td><td class="c" style="font-size:11px">'+(uCT?new Date(uCT.DATA).toLocaleDateString('pt-BR'):'—')+'</td><td class="c" style="font-size:11px">'+(uCLF?new Date(uCLF.DATA).toLocaleDateString('pt-BR'):'—')+'</td><td>'+msgWpp(r.nome)+'</td><td>'+gdBtn(r.nome)+'</td></tr>';
-    }).join('')+'</tbody>';
-});
-
-// ── 6. Calendário listener ───────────────────────────────
-document.getElementById('calMes')?.addEventListener('change', renderCal);
-document.getElementById('calAno')?.addEventListener('change', renderCal);
-document.getElementById('btnCalRender')?.addEventListener('click', renderCal);
-
-// ── 7. gdSyncFlags como alias de gdLoadFlags (botão Sincronizar) ─
-const gdLoadFlags = async () => {
-  if (!GD.TOKEN) { alert('Conecte ao Google Drive primeiro.'); return; }
-  gdSetStatus('syncing','Sincronizando...');
-  await gdSyncFlags();
-  gdSetStatus('ok','☁️ Drive conectado');
-};
-
-// ── 8. Gestão de Pacotes — mês no select (filtrar por mês) ─
-const renderCtGestao = () => renderGestao(
-  DB.ct,
-  document.getElementById('ctG1').value,
-  document.getElementById('ctG2').value,
-  document.getElementById('ctGPac').value,
-  document.getElementById('ctGTur').value,
-  document.getElementById('ctGSit').value,
-  document.getElementById('ctGOrd').value,
-  'ct'
-);
-const renderColGestao = () => renderGestao(
-  DB.col,
-  document.getElementById('colG1').value,
-  document.getElementById('colG2').value,
-  document.getElementById('colGPac').value,
-  document.getElementById('colGTur').value,
-  document.getElementById('colGSit').value,
-  document.getElementById('colGOrd').value,
-  'col'
-);
-
-
-
 
 const filFlx=(ano,mesArr=[],fluxoTipo='')=>DB.flx.filter(r=>{
   if(ano&&!sameAno(r.ANO,ano))return false;
@@ -1567,6 +1119,7 @@ const filFlx=(ano,mesArr=[],fluxoTipo='')=>DB.flx.filter(r=>{
 const popAll=()=>{
   const aC=anosOf(DB.ct),aCol=anosOf(DB.col),aFe=anosOf(DB.fest),aFlx=anosOf(DB.flx);
   const aAll=[...new Set([...aC,...aCol,...aFe,...aFlx])].sort((a,b)=>parseInt(b)-parseInt(a));
+  popSel('homeAno',[{v:'',t:'Todos os Anos'},...aAll.map(a=>({v:a,t:a}))]);
   popSel('homeAno',[{v:'',t:'Todos os Anos'},...aAll.map(a=>({v:a,t:a}))]);
   const ma=String(new Date().getMonth()+1);
   const mn_=mN(),m0=mOpts(),mnt=mOpts(false);
@@ -2202,8 +1755,8 @@ document.getElementById('colAno')?.addEventListener('change',renderCol);
 document.getElementById('btnCtAgr')?.addEventListener('click',()=>{ctAgr=!ctAgr;const b=document.getElementById('btnCtAgr');b.textContent=ctAgr?'📦 Desagrupar':'📦 Agrupar Pacotes';b.classList.toggle('on',ctAgr);renderCT();});
 document.getElementById('btnCtR')?.addEventListener('click',()=>{const r=engRec(DB.ct,document.getElementById('ctCRAno').value,parseInt(document.getElementById('ctCRDe').value),parseInt(document.getElementById('ctCRAte').value),parseInt(document.getElementById('ctCRMin').value),parseInt(document.getElementById('ctCRChurn').value),document.getElementById('ctCRTur').value);showRec('ctCRK','ctCRTb',r,document.getElementById('ctCRAno').value);});
 document.getElementById('btnCtP')?.addEventListener('click',()=>{const r=engPerComSaldo(DB.ct,parseInt(document.getElementById('ctPADe').value),parseInt(document.getElementById('ctPAAte').value),document.getElementById('ctPAAno').value,parseInt(document.getElementById('ctPBDe').value),parseInt(document.getElementById('ctPBAte').value),document.getElementById('ctPBAno').value);showPerCTCOL('ctCPK','ctCPTb',r,document.getElementById('ctPAAno').value,document.getElementById('ctPBAno').value);});
-document.getElementById('btnCtD')?.addEventListener('click',()=>{const r=engDorm(DB.ct,document.getElementById('ctDAno').value,parseInt(document.getElementById('ctDMes').value),document.getElementById('ctDPac').value);document.getElementById('ctDTb').innerHTML='<thead><tr><th>#</th><th>Aluno</th><th>Pacote</th><th>Turno</th><th>Último uso</th><th>Meses parado</th><th>Saldo</th><th>H.realizadas</th><th>Score</th><th><label style=\"cursor:pointer;font-weight:600\"><input type=\"checkbox\" id=\"chkCtDSoRes\"> Só pendentes</label></th></tr></thead><tbody>'+r.filter(x=>!document.getElementById('chkRecSoRes')?.checked||!gdGet(x.nome).resolvido).map((c,i)=>'<tr style="opacity:'+(gdGet(c.nome).resolvido?'0.45':'1')+'"><td>'+(i+1)+'</td><td style="font-weight:700">'+c.nome+'</td><td>'+(c.pac||'—')+'</td><td>'+(tagTur(c.tur)||'—')+'</td><td class="c">'+(MSH[c.uMes-1]||c.uMes)+'/'+c.uAno+'</td><td class="c" style="color:#dc2626;font-weight:700">'+c.mp+'m</td><td class="r" style="color:'+(c.saldo<=0?'#dc2626':c.saldo<5?'#d97706':'inherit')+'">'+c.saldo.toFixed(1)+'h</td><td class="r">'+fmtH(c.hR)+'</td><td>'+scBar(c.sc)+'</td><td>'+gdBtn(c.nome)+'</td></tr>').join('')+'</tbody>';});
-document.getElementById('btnCtSA')?.addEventListener('click',()=>{const r=engSA(DB.ct,document.getElementById('ctSAAno').value,parseFloat(document.getElementById('ctSASaldo').value),parseInt(document.getElementById('ctSAMes').value));const risco=s=>s>=10?'<span class="ba ba-err">🔴 Alto</span>':s>=5?'<span class="ba ba-w">🟡 Médio</span>':'<span class="ba ba-ok">🟢 Baixo</span>';document.getElementById('ctSATb').innerHTML='<thead><tr><th>#</th><th>Aluno</th><th>Pacote</th><th>Saldo</th><th>Último uso</th><th>Meses parado</th><th>Risco</th><th><label style=\"cursor:pointer;font-weight:600\"><input type=\"checkbox\" id=\"chkCtSASoRes\"> Só pendentes</label></th></tr></thead><tbody>'+r.filter(x=>!document.getElementById('chkRecSoRes')?.checked||!gdGet(x.nome).resolvido).map((c,i)=>'<tr style="opacity:'+(gdGet(c.nome).resolvido?'0.45':'1')+'"><td>'+(i+1)+'</td><td style="font-weight:700">'+c.nome+'</td><td>'+(c.pac||'—')+'</td><td class="r" style="color:#2563eb;font-weight:700">'+c.saldo.toFixed(1)+'h</td><td class="c">'+(MSH[c.uMes-1]||c.uMes)+'/'+c.uAno+'</td><td class="c">'+c.mp+'m</td><td>'+risco(c.saldo)+'</td><td>'+gdBtn(c.nome)+'</td></tr>').join('')+'</tbody>';});
+document.getElementById('btnCtD')?.addEventListener('click',()=>{const r=engDorm(DB.ct,document.getElementById('ctDAno').value,parseInt(document.getElementById('ctDMes').value),document.getElementById('ctDPac').value);document.getElementById('ctDTb').innerHTML='<thead><tr><th>#</th><th>Aluno</th><th>Pacote</th><th>Turno</th><th>Último uso</th><th>Meses parado</th><th>Saldo</th><th>H.realizadas</th><th>Score</th><th><label style=\"cursor:pointer;font-weight:600\"><input type=\"checkbox\" id=\"chkCtDSoRes\"> Só pendentes</label></th></tr></thead><tbody>'+r.map((c,i)=>'<tr><td>'+(i+1)+'</td><td style="font-weight:700">'+c.nome+'</td><td>'+(c.pac||'—')+'</td><td>'+(tagTur(c.tur)||'—')+'</td><td class="c">'+(MSH[c.uMes-1]||c.uMes)+'/'+c.uAno+'</td><td class="c" style="color:#dc2626;font-weight:700">'+c.mp+'m</td><td class="r" style="color:'+(c.saldo<=0?'#dc2626':c.saldo<5?'#d97706':'inherit')+'">'+c.saldo.toFixed(1)+'h</td><td class="r">'+fmtH(c.hR)+'</td><td>'+scBar(c.sc)+'</td><td>'+gdBtn(c.nome)+'</td></tr>').join('')+'</tbody>';});
+document.getElementById('btnCtSA')?.addEventListener('click',()=>{const r=engSA(DB.ct,document.getElementById('ctSAAno').value,parseFloat(document.getElementById('ctSASaldo').value),parseInt(document.getElementById('ctSAMes').value));const risco=s=>s>=10?'<span class="ba ba-err">🔴 Alto</span>':s>=5?'<span class="ba ba-w">🟡 Médio</span>':'<span class="ba ba-ok">🟢 Baixo</span>';document.getElementById('ctSATb').innerHTML='<thead><tr><th>#</th><th>Aluno</th><th>Pacote</th><th>Saldo</th><th>Último uso</th><th>Meses parado</th><th>Risco</th><th><label style=\"cursor:pointer;font-weight:600\"><input type=\"checkbox\" id=\"chkCtSASoRes\"> Só pendentes</label></th></tr></thead><tbody>'+r.filter(x=>!document.getElementById('chkCtSASoRes')?.checked||!gdGet(x.nome).resolvido).map((c,i)=>'<tr style="opacity:'+(gdGet(c.nome).resolvido?'0.45':'1')+'"><td>'+(i+1)+'</td><td style="font-weight:700">'+c.nome+'</td><td>'+(c.pac||'—')+'</td><td class="r" style="color:#2563eb;font-weight:700">'+c.saldo.toFixed(1)+'h</td><td class="c">'+(MSH[c.uMes-1]||c.uMes)+'/'+c.uAno+'</td><td class="c">'+c.mp+'m</td><td>'+risco(c.saldo)+'</td><td>'+gdBtn(c.nome)+'</td></tr>').join('')+'</tbody>';});
 // COL comercial
 document.getElementById('btnColR')?.addEventListener('click',()=>{const r=engRec(DB.col,document.getElementById('colCRAno').value,parseInt(document.getElementById('colCRDe').value),parseInt(document.getElementById('colCRAte').value),parseInt(document.getElementById('colCRMin').value),parseInt(document.getElementById('colCRChurn').value),'');showRec('colCRK','colCRTb',r,document.getElementById('colCRAno').value);});
 document.getElementById('btnColP')?.addEventListener('click',()=>{const r=engPerComSaldo(DB.col,parseInt(document.getElementById('colPADe').value),parseInt(document.getElementById('colPAAte').value),document.getElementById('colPAAno').value,parseInt(document.getElementById('colPBDe').value),parseInt(document.getElementById('colPBAte').value),document.getElementById('colPBAno').value);showPerCTCOL('colCPK','colCPTb',r,document.getElementById('colPAAno').value,document.getElementById('colPBAno').value);});
@@ -2228,7 +1781,7 @@ document.getElementById('btnSem')?.addEventListener('click',()=>{const prods=[..
 ['intelAno','intelDe','intelAte'].forEach(id=>document.getElementById(id)?.addEventListener('change',renderIntel));
 document.getElementById('btnIntelR')?.addEventListener('click',()=>{const aA=document.getElementById('intelRA').value,aB=document.getElementById('intelRB').value,mes=document.getElementById('intelRM').value;const sA=new Set(DB.flx.filter(r=>r.ANO===aA&&r.MES_NUM===parseInt(mes)&&r.FLUXO==='Entrada'&&r.NOME).map(r=>r.NOME));const sB=new Set(DB.flx.filter(r=>r.ANO===aB&&r.MES_NUM===parseInt(mes)&&r.FLUXO==='Entrada'&&r.NOME).map(r=>r.NOME));const ret=[...sA].filter(n=>sB.has(n)).length,nov=[...sB].filter(n=>!sA.has(n)).length,churn=[...sA].filter(n=>!sB.has(n)).length;const taxa=sA.size?((ret/sA.size)*100).toFixed(1):0;document.getElementById('intelRK').innerHTML='<div class="kpi ok"><div class="lb">Retidos</div><div class="vl">'+ret+'</div></div><div class="kpi"><div class="lb">Novos</div><div class="vl">'+nov+'</div></div><div class="kpi err"><div class="lb">Churn</div><div class="vl">'+churn+'</div></div><div class="kpi '+(parseFloat(taxa)>=70?'ok':parseFloat(taxa)>=40?'w':'err')+'"><div class="lb">Taxa retenção</div><div class="vl">'+taxa+'%</div></div>';if(!CH['ret_i']){mkC('intelcR','bar');mkC('intelcRF','bar');CH['ret_i']=true;}updC('intelcR',['Retidos','Novos','Churn'],[{label:'Clientes',data:[ret,nov,churn],backgroundColor:['#16a34a','#2563eb','#dc2626']}]);const rRet=DB.flx.filter(r=>r.ANO===aB&&r.MES_NUM===parseInt(mes)&&r.FLUXO==='Entrada'&&sA.has(r.NOME)&&sB.has(r.NOME)).reduce((s,r)=>s+r.VALOR,0);const rChurn=DB.flx.filter(r=>r.ANO===aA&&r.MES_NUM===parseInt(mes)&&r.FLUXO==='Entrada'&&sA.has(r.NOME)&&!sB.has(r.NOME)).reduce((s,r)=>s+r.VALOR,0);updC('intelcRF',['Receita retida','Receita perdida'],[{label:'R$',data:[rRet,rChurn],backgroundColor:['#16a34a','#dc2626']}],scY(fmt));});
 // COMERCIAL FLUXO — Bloco 3 Dormentes usa CT+COL realizados
-document.getElementById('btnFlxCmR')?.addEventListener('click',()=>{const ano=document.getElementById('flxCmAno').value,de=parseInt(document.getElementById('flxCmDe').value),ate=parseInt(document.getElementById('flxCmAte').value),minM=parseInt(document.getElementById('flxCmMin').value),churn=parseInt(document.getElementById('flxCmChurn').value);const por={};filFlx(ano,[]).filter(r=>r.FLUXO==='Entrada'&&r.MES_NUM>=de&&r.MES_NUM<=ate&&r.NOME).forEach(r=>{const n=r.NOME,m=mNumFlx(r);if(!por[n])por[n]={meses:new Set(),v:0,uMes:0};por[n].meses.add(m);por[n].v+=r.VALOR;if(m>por[n].uMes)por[n].uMes=m;});const r=Object.entries(por).filter(([,c])=>c.meses.size>=minM&&(ate-c.uMes)>=churn).map(([nome,c])=>({nome,qtdM:c.meses.size,uMes:c.uMes,mP:ate-c.uMes,v:c.v,sc:scFn(c.v,ate-c.uMes,c.meses.size)})).sort((a,b)=>b.sc-a.sc);document.getElementById('flxCmRK').innerHTML='<div class="kpi err"><div class="lb">Em queda</div><div class="vl">'+r.length+'</div></div><div class="kpi w"><div class="lb">Valor em risco</div><div class="vl">'+fmt(r.reduce((s,c)=>s+c.v,0))+'</div></div>';const pb=s=>s>=70?'<span class="ba ba-err">🔴</span>':s>=40?'<span class="ba ba-w">🟡</span>':'<span class="ba ba-ok">🟢</span>';document.getElementById('flxCmRTb').innerHTML='<thead><tr><th>#</th><th>Cliente</th><th>Meses ativos</th><th>Último mês</th><th>Meses parado</th><th>Valor</th><th>Prioridade</th></tr></thead><tbody>'+r.filter(x=>!document.getElementById('chkRecSoRes')?.checked||!gdGet(x.nome).resolvido).map((c,i)=>'<tr style="opacity:'+(gdGet(c.nome).resolvido?'0.45':'1')+'"><td>'+(i+1)+'</td><td style="font-weight:700">'+c.nome+'</td><td class="c">'+c.qtdM+'</td><td class="c">'+(MSH[c.uMes-1]||c.uMes)+'/'+ano+'</td><td class="c" style="color:#dc2626;font-weight:700">'+c.mP+'m</td><td class="r">'+fmt(c.v)+'</td><td>'+pb(c.sc)+' '+scBar(c.sc)+'</td><td>'+gdBtn(c.nome)+'</td></tr>').join('')+'</tbody>';});
+document.getElementById('btnFlxCmR')?.addEventListener('click',()=>{const ano=document.getElementById('flxCmAno').value,de=parseInt(document.getElementById('flxCmDe').value),ate=parseInt(document.getElementById('flxCmAte').value),minM=parseInt(document.getElementById('flxCmMin').value),churn=parseInt(document.getElementById('flxCmChurn').value);const por={};filFlx(ano,[]).filter(r=>r.FLUXO==='Entrada'&&r.MES_NUM>=de&&r.MES_NUM<=ate&&r.NOME).forEach(r=>{const n=r.NOME,m=mNumFlx(r);if(!por[n])por[n]={meses:new Set(),v:0,uMes:0};por[n].meses.add(m);por[n].v+=r.VALOR;if(m>por[n].uMes)por[n].uMes=m;});const r=Object.entries(por).filter(([,c])=>c.meses.size>=minM&&(ate-c.uMes)>=churn).map(([nome,c])=>({nome,qtdM:c.meses.size,uMes:c.uMes,mP:ate-c.uMes,v:c.v,sc:scFn(c.v,ate-c.uMes,c.meses.size)})).sort((a,b)=>b.sc-a.sc);document.getElementById('flxCmRK').innerHTML='<div class="kpi err"><div class="lb">Em queda</div><div class="vl">'+r.length+'</div></div><div class="kpi w"><div class="lb">Valor em risco</div><div class="vl">'+fmt(r.reduce((s,c)=>s+c.v,0))+'</div></div>';const pb=s=>s>=70?'<span class="ba ba-err">🔴</span>':s>=40?'<span class="ba ba-w">🟡</span>':'<span class="ba ba-ok">🟢</span>';document.getElementById('flxCmRTb').innerHTML='<thead><tr><th>#</th><th>Cliente</th><th>Meses ativos</th><th>Último mês</th><th>Meses parado</th><th>Valor</th><th>Prioridade</th></tr></thead><tbody>'+r.map((c,i)=>'<tr><td>'+(i+1)+'</td><td style="font-weight:700">'+c.nome+'</td><td class="c">'+c.qtdM+'</td><td class="c">'+(MSH[c.uMes-1]||c.uMes)+'/'+ano+'</td><td class="c" style="color:#dc2626;font-weight:700">'+c.mP+'m</td><td class="r">'+fmt(c.v)+'</td><td>'+pb(c.sc)+' '+scBar(c.sc)+'</td></tr>').join('')+'</tbody>';});
 
 document.getElementById('btnFlxCmP')?.addEventListener('click',()=>{const aDe=parseInt(document.getElementById('flxPADe').value),aAte=parseInt(document.getElementById('flxPAAte').value),aAno=document.getElementById('flxPAAno').value,bDe=parseInt(document.getElementById('flxPBDe').value),bAte=parseInt(document.getElementById('flxPBAte').value),bAno=document.getElementById('flxPBAno').value;const fil=(ano,de,ate)=>filFlx(ano,[]).filter(r=>r.FLUXO==='Entrada'&&mNumFlx(r)>=de&&mNumFlx(r)<=ate&&r.NOME);const cA={},cB={};fil(aAno,aDe,aAte).forEach(r=>{const n=r.NOME;if(!cA[n])cA[n]={v:0,u:0};cA[n].v+=r.VALOR;cA[n].u++;});fil(bAno,bDe,bAte).forEach(r=>{const n=r.NOME;if(!cB[n])cB[n]={v:0};cB[n].v+=r.VALOR;});const res=Object.entries(cA).map(([nome,a])=>({nome,vA:a.v,uA:a.u,noB:!!cB[nome],vB:cB[nome]?.v||0})).sort((a,b)=>a.noB-b.noB||b.vA-a.vA);const perd=res.filter(c=>!c.noB),ret=res.filter(c=>c.noB);document.getElementById('flxCmPK').innerHTML='<div class="kpi"><div class="lb">No Per.A</div><div class="vl">'+res.length+'</div></div><div class="kpi ok"><div class="lb">Retidos</div><div class="vl">'+ret.length+'</div></div><div class="kpi err"><div class="lb">Perdidos</div><div class="vl">'+perd.length+'</div></div><div class="kpi w"><div class="lb">Valor em risco</div><div class="vl">'+fmt(perd.reduce((s,c)=>s+c.vA,0))+'</div></div><div class="kpi ok"><div class="lb">Taxa retenção</div><div class="vl">'+(res.length?((ret.length/res.length)*100).toFixed(0)+'%':'0%')+'</div></div>';document.getElementById('flxCmPTb').innerHTML='<thead><tr><th>#</th><th>Cliente</th><th>Valor Per.A</th><th>Usos</th><th>Per.B?</th><th>Valor Per.B</th><th>Ação</th></tr></thead><tbody>'+res.map((c,i)=>'<tr style="'+((!c.noB)?'background:#fff8f8':'')+'"><td>'+(i+1)+'</td><td style="font-weight:700">'+c.nome+'</td><td class="r">'+fmt(c.vA)+'</td><td class="c">'+c.uA+'</td><td class="c" style="color:'+(c.noB?'#16a34a':'#dc2626')+';font-weight:700">'+(c.noB?'Sim':'Não')+'</td><td class="r">'+(c.vB>0?fmt(c.vB):'—')+'</td><td style="font-size:12px">'+(c.noB?'<span style="color:#16a34a">✅ Retido</span>':c.vA>=2000?'📞 Ligar':c.vA>=500?'📱 WhatsApp':'📧 E-mail')+'</td></tr>').join('')+'</tbody>';});
 
@@ -2246,7 +1799,7 @@ document.getElementById('btnFlxCS')?.addEventListener('click',()=>{const srcTipo
 
 // Dormentes consolidados — usa CT+COL realizados
 
-document.getElementById('btnComCS')?.addEventListener('click',()=>{const nCT=new Set(DB.ct.map(r=>normN(r.NOME)).filter(Boolean));const nCol=new Set(DB.col.map(r=>normN(r.NOME)).filter(Boolean));const nFe=new Set(DB.fest.map(r=>normN(r.NOME)).filter(Boolean));const mkCross=(srcSet,dstSet,srcBase)=>{const alvos=[...srcSet].filter(n=>[...dstSet].every(d=>d!==n));const det={};srcBase.filter(r=>alvos.includes(normN(r.NOME))).forEach(r=>{const nn=normN(r.NOME),val=r.VALOR||r.VALOR_TOTAL||0;if(!det[nn])det[nn]={nome:r.NOME,v:0,u:0};det[nn].v+=val;det[nn].u++;});return Object.values(det).sort((a,b)=>b.v-a.v).slice(0,15);};const c1=mkCross(nFe,nCT,DB.fest),c2=mkCross(nCT,nFe,DB.ct),c3=mkCross(nCT,nCol,DB.ct);const mkT=(id,data)=>{document.getElementById(id).innerHTML='<thead><tr><th>#</th><th>Cliente</th><th>Valor</th><th>Potencial</th></tr></thead><tbody>'+data.map((c,i)=>'<tr><td>'+(i+1)+'</td><td style="font-weight:700">'+c.nome+'</td><td class="r">'+fmt(c.v)+'</td><td>'+scBar(scFn(c.v,0,c.u))+'</td><td>'+gdBtn(c.nome)+'</td></tr>').join('')+'</tbody>';};mkT('cross1',c1);mkT('cross2',c2);mkT('cross3',c3);});
+document.getElementById('btnComCS')?.addEventListener('click',()=>{const nCT=new Set(DB.ct.map(r=>normN(r.NOME)).filter(Boolean));const nCol=new Set(DB.col.map(r=>normN(r.NOME)).filter(Boolean));const nFe=new Set(DB.fest.map(r=>normN(r.NOME)).filter(Boolean));const mkCross=(srcSet,dstSet,srcBase)=>{const alvos=[...srcSet].filter(n=>[...dstSet].every(d=>d!==n));const det={};srcBase.filter(r=>alvos.includes(normN(r.NOME))).forEach(r=>{const nn=normN(r.NOME),val=r.VALOR||r.VALOR_TOTAL||0;if(!det[nn])det[nn]={nome:r.NOME,v:0,u:0};det[nn].v+=val;det[nn].u++;});return Object.values(det).sort((a,b)=>b.v-a.v).slice(0,15);};const c1=mkCross(nFe,nCT,DB.fest),c2=mkCross(nCT,nFe,DB.ct),c3=mkCross(nCT,nCol,DB.ct);const mkT=(id,data)=>{document.getElementById(id).innerHTML='<thead><tr><th>#</th><th>Cliente</th><th>Valor</th><th>Potencial</th></tr></thead><tbody>'+data.map((c,i)=>'<tr><td>'+(i+1)+'</td><td style="font-weight:700">'+c.nome+'</td><td class="r">'+fmt(c.v)+'</td><td>'+scBar(scFn(c.v,0,c.u))+'</td></tr>').join('')+'</tbody>';};mkT('cross1',c1);mkT('cross2',c2);mkT('cross3',c3);});
 
 document.getElementById('btnComBday')?.addEventListener('click',()=>{const dias=parseInt(document.getElementById('comBD').value);const hoje=new Date(),fim=new Date(hoje);fim.setDate(fim.getDate()+dias);const list=[],vis=new Set();DB.fest.filter(r=>r.DATA_NASC&&r.NOME).forEach(r=>{const dn=new Date(r.DATA_NASC);const bd=new Date(hoje.getFullYear(),dn.getMonth(),dn.getDate());if(bd>=hoje&&bd<=fim){const nn=normN(r.NOME);if(!vis.has(nn)){vis.add(nn);list.push({nome:r.NOME,dn,age:hoje.getFullYear()-dn.getFullYear(),bd,tel:r.TELEFONE||r.CONTRATANTE||'—'});}}});list.sort((a,b)=>a.bd-b.bd);const g=document.getElementById('comBdayG');g.innerHTML=list.length?list.map(r=>'<div class="bday-c"><div class="bday-age">'+r.age+'</div><div><div style="font-size:13px;font-weight:700">'+r.nome+'</div><div style="font-size:11px;color:#64748b">🎂 '+r.dn.getDate()+'/'+(r.dn.getMonth()+1)+' · 📞 '+r.tel+'</div></div></div>').join(''):'<div class="empty"><span class="em">🎂</span><p>Nenhum aniversário</p></div>';});
 // VISÃO 360° — com filtro de ANO e MÊS
@@ -2293,17 +1846,6 @@ document.getElementById('fLogo')?.addEventListener('change',e=>{if(e.target.file
 document.getElementById('btnQI')?.addEventListener('click',()=>{document.querySelectorAll('.sb-i').forEach(i=>i.classList.remove('on'));document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));document.querySelector('[data-pg="cfg"]')?.classList.add('on');document.getElementById('pg-cfg')?.classList.add('on');document.getElementById('tbT').textContent='⚙️ Configurações';document.getElementById('tbS').textContent='Importação e sistema';});
 document.getElementById('btnClrAll')?.addEventListener('click',async()=>{if(!confirm('Limpar TODOS os dados?'))return;for(const t of['ct','col','fest','flx']){await iDel('bases',t);await iDel('meta',t);}location.reload();});
 [['btnClrCt','ct'],['btnClrCol','col'],['btnClrFe','fest'],['btnClrFlx','flx']].forEach(([id,t])=>{document.getElementById(id)?.addEventListener('click',async()=>{if(!confirm('Limpar '+t+'?'))return;await iDel('bases',t);await iDel('meta',t);location.reload();});});
-// ── Listeners para botões migrados de onclick HTML ──
-document.getElementById('btnHomeRender')?.addEventListener('click', renderHome);
-document.getElementById('homeAno')?.addEventListener('change', renderHome);
-document.getElementById('btnCalRender')?.addEventListener('click', renderCal);
-document.getElementById('btnCtGestaoFiltrar')?.addEventListener('click', renderCtGestao);
-document.getElementById('btnColGestaoFiltrar')?.addEventListener('click', renderColGestao);
-document.getElementById('btnGdConfigure')?.addEventListener('click', gdConfigure);
-document.getElementById('btnGdSync')?.addEventListener('click', gdLoadFlags);
-document.getElementById('btnGdLoginCfg')?.addEventListener('click', gdLogin);
-document.getElementById('btnGdLogoutCfg')?.addEventListener('click', gdLogout);
-
 // Handler global para botões de copiar mensagem
 document.addEventListener('click', e => {
   const btn = e.target.closest('.btn-copiar-msg');
@@ -2333,6 +1875,16 @@ carregarTudo();
 
 // ─── Categorização de pacotes CT com agrupamento ─
 // getGrpAgr: sempre agrupa pacotes em 'Contraturno' (para gráficos home/painel)
+const getGrpAgr=(t='')=>{
+  const s=norm(t||'');
+  if(s.startsWith('pacote'))return'Contraturno';
+  if(s.includes('colon'))return'Colônias';
+  if(s.includes('festinha'))return'Festinhas';
+  if(s.includes('aluguel'))return'Aluguel';
+  if(s.includes('evento'))return'Eventos';
+  if(s.includes('oficina'))return'Oficinas';
+  return'Outros';
+};
 
 // ─── filFlx com sameAno ─────────────────────────
 // Sobrescreve a versão anterior para garantir sameAno em todos os casos
@@ -2488,9 +2040,6 @@ document.getElementById('btnComR')?.addEventListener('click', () => {
 // ── Listener Retenção com flag ────────────────────────
 
 // ── Sincroniza com Drive ao iniciar ──────────────────
-(async () => {
-  await gdLoadConfig();
-})();
 
 
 
@@ -2536,6 +2085,360 @@ document.getElementById('btnComR')?.addEventListener('click', () => {
 
 // ══ GOOGLE DRIVE ══
 // Só precisa de CLIENT_ID (OAuth 2.0). Sem API Key.
+const GD = { flags: {}, ready: true };
+
+const gdLoadLocal = async () => {
+  const local = await iGet('meta', 'gdflags');
+  if (local && Object.keys(local).length > 0) { GD.flags = local; }
+};
+const gdSave = async () => { await iSet('meta', 'gdflags', GD.flags); };
+const gdToggle = async (nome) => {
+  const key = normN(nome);
+  const atual = GD.flags[key] && GD.flags[key].resolvido;
+  GD.flags[key] = { nome, resolvido: !atual, ts: new Date().toISOString() };
+  await gdSave();
+  document.querySelectorAll('[data-gdkey="'+key+'"]').forEach(btn => {
+    const res = GD.flags[key].resolvido;
+    btn.textContent = res ? '\u2705 Resolvido' : '\u25cb Pendente';
+    btn.style.background = res ? '#dcfce7' : '#f1f5f9';
+    btn.style.color = res ? '#166534' : '#475569';
+    const tr = btn.closest('tr'); if (tr) tr.style.opacity = res ? '0.45' : '1';
+  });
+};
+const gdGet = (nome) => GD.flags[normN(nome)] || { resolvido: false };
+const gdBtn = (nome) => {
+  const key = normN(nome);
+  const res = gdGet(nome).resolvido;
+  const bg = res ? '#dcfce7' : '#f1f5f9';
+  const cor = res ? '#166534' : '#475569';
+  const bor = res ? '#bbf7d0' : '#e2e8f0';
+  const lbl = res ? '\u2705 Resolvido' : '\u25cb Pendente';
+  const safe = nome.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  return '<button data-gdkey="'+key+'" onclick="gdToggle(\''+safe+'\');" style="background:'+bg+';color:'+cor+';border:1px solid '+bor+';border-radius:4px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">'+lbl+'</button>';
+};
+const gdExport = () => {
+  const blob = new Blob([JSON.stringify(GD.flags,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url;a.download='bnq_flags_backup.json';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+};
+const gdImport = (file) => {
+  if(!file)return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      GD.flags = Object.assign({},GD.flags,data);
+      await gdSave();
+      alert('\u2705 '+Object.keys(data).length+' flags importados!');
+    } catch(err){alert('Erro: '+err.message);}
+  };
+  reader.readAsText(file);
+};
+const gdSetStatus = (state, msg) => {
+  const cors={ok:'#16a34a',error:'#dc2626',syncing:'#d97706',off:'#9ca3af'};
+  const cor=cors[state]||'#9ca3af';
+  ['gdDot','gdDot2'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.background=cor;});
+  ['gdTxt','gdTxt2'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=msg;});
+  const sdGd=document.getElementById('sd-gd');if(sdGd)sdGd.querySelector('.d').style.background=cor;
+};
+const gdLoadConfig = async () => {
+  await gdLoadLocal();
+  gdSetStatus('ok','\ud83d\udcbe '+Object.keys(GD.flags).length+' flags salvos localmente');
+};
+const gdLoadFlags = async () => {
+  await gdLoadLocal();
+  gdSetStatus('ok','\u2705 '+Object.keys(GD.flags).length+' flags carregados');
+};
+const gdLogin = async () => {
+  alert('\u2139\ufe0f Os flags s\u00e3o salvos automaticamente no seu navegador.\n\nUse Exportar/Importar para backup entre dispositivos.');
+};
+const gdLogout = async () => { gdSetStatus('off','Desconectado'); };
+const gdConfigure = async () => { gdSetStatus('ok','\ud83d\udcbe Flags salvos localmente'); };
+
+
+
+// ═══════════════════════════════════════════════════════
+// PATCH DE BUGS — aplicado sobre newcode_v2.js
+// Todas as funções substituídas; nenhuma nova dependência
+// ═══════════════════════════════════════════════════════
+
+// ── 1. parseCTCol: filtra nomes que começam com 20XX ────
+const parseCTCol = wb => {
+  const aba = wb.SheetNames.find(n => norm(n).includes('planilha1')) || wb.SheetNames[0];
+  const ws = wb.Sheets[aba];
+  if (!ws || !ws['!ref']) throw new Error('Aba não encontrada. Abas: ' + wb.SheetNames.join(', '));
+  const rawRows = XLSX.utils.sheet_to_json(ws, {defval:'', raw:true, cellDates:true, header:1});
+  const hdr = rawRows[0].map(h => norm(String(h || '')));
+  const fi = fn => hdr.findIndex(fn);
+  const idx = {
+    DATA:   fi(h => h === 'data'),
+    MES:    fi(h => h === 'mes' || h.includes('m\xeas')),
+    ANO:    fi(h => h === 'ano'),
+    NOME:   fi(h => h.includes('crianca') || h.includes('crian\xe7a') || h.includes('nome')),
+    TIPO:   fi(h => h.includes('tipo')),
+    PACOTE: fi(h => h.includes('pacote')),
+    QTDE:   fi(h => h === 'qtde' || h.includes('hora')),
+    VALOR:  fi(h => h === 'valor'),
+    TURNO:  fi(h => h.includes('turno')),
+    SALDO:  fi(h => h === 'saldo'),
+  };
+  if (idx.NOME < 0 || idx.ANO < 0) throw new Error('Colunas não encontradas: ' + hdr.slice(0,8).join('|'));
+  return rawRows.slice(1).map(row => {
+    const dataRaw = row[idx.DATA];
+    let dataStr = '';
+    if (dataRaw instanceof Date) dataStr = dataRaw.toISOString().substring(0, 10);
+    else if (typeof dataRaw === 'number') {
+      const d = new Date(new Date(1899,11,30).getTime() + dataRaw * 86400000);
+      dataStr = d.toISOString().substring(0, 10);
+    } else if (dataRaw) dataStr = String(dataRaw);
+    const mes = norm(String(row[idx.MES] || '')).substring(0, 3);
+    const ano = String(row[idx.ANO] || '').replace('.0','').trim();
+    const nome = (row[idx.NOME] || '').toString().trim();
+    return { DATA:dataStr, MES:mes, ANO:ano, NOME:nome,
+      TIPO:normTipo(row[idx.TIPO]), PACOTE:normPac(row[idx.PACOTE]),
+      QTDE:cl(row[idx.QTDE]), VALOR:cl(row[idx.VALOR]),
+      TURNO:normTur(row[idx.TURNO]), SALDO:cl(row[idx.SALDO]) };
+  }).filter(r => {
+    if (!r.ANO || !r.NOME || isNaN(parseInt(r.ANO))) return false;
+    // Filtra nomes que são anos (erro na base: 2024xxx, 2025xxx, 2026xxx)
+    if (/^20\d{2}/.test(r.NOME.trim())) return false;
+    return true;
+  });
+};
+
+// ── 2. mOpts com opção "Acumulado Ano" ──────────────────
+const mOpts = (t=true) => {
+  const mesAtual = new Date().getMonth() + 1;
+  const base = t ? [{v:'0',t:'Ano Todo'}, {v:'acc',t:'Acumulado (Jan→Atual)'}] : [];
+  return [...base, ...MESES.map((m,i) => ({v:String(i+1), t:m}))];
+};
+
+// ── 3. renderFest CORRIGIDO ──────────────────────────────
+// - Pipeline Reserva: só datas a partir de hoje
+// - Pipeline Pago: ordena menor→maior data, só futuras/próximas
+// - Ticket Médio por Modelo: usa todos os dados do ANO (não só mês filtrado)
+// - Faturamento/Ticket reagem ao mês selecionado
+// - Acumulado Ano no filtro de mês
+const renderFest = () => {
+  const ano   = document.getElementById('festAno')?.value; if (!ano) return;
+  const mesV  = document.getElementById('festMes')?.value || '0';
+  const hoje  = new Date();
+  const mesAtual = hoje.getMonth() + 1;
+  // Determina range de meses para filtro financeiro
+  let mesInicio = 1, mesFim = 12;
+  if (mesV === '0')   { mesInicio=1; mesFim=12; }
+  else if (mesV === 'acc') { mesInicio=1; mesFim=mesAtual; }
+  else { mesInicio=parseInt(mesV); mesFim=parseInt(mesV); }
+  // d = dados filtrados pelo range de meses
+  const d = DB.fest.filter(r => sameAno(r.ANO,ano) && r.MES_NUM>=mesInicio && r.MES_NUM<=mesFim);
+  // todos = todos do ano (para pipeline e ticket modelo)
+  const todos = DB.fest.filter(r => sameAno(r.ANO,ano));
+  if (!CH['fec_i']) {
+    mkC('fecSt','doughnut'); mkC('fecFat','bar'); mkC('fecTur','doughnut');
+    mkC('fecMod','bar',{indexAxis:'y'}); mkC('fecTick','bar'); mkC('fecInad','bar');
+    CH['fec_i'] = true;
+  }
+  const total=d.length, pago=d.filter(r=>r.STATUS==='Pago 100%').length;
+  const pag=d.filter(r=>r.STATUS==='Pagando').length, res=d.filter(r=>r.STATUS==='Reserva').length;
+  // Faturamento via fluxo filtrado pelo range de meses
+  const mesList = Array.from({length:mesFim-mesInicio+1},(_,i)=>mesInicio+i);
+  const fatFlxFe = filFlx(ano, mesList.length<12?mesList:[], 'Entrada')
+    .filter(r => norm(r.TIPO_RECEITA||'').includes('festinha'));
+  const fatFlxM = Array(12).fill(0);
+  fatFlxFe.forEach(r => {
+    const m = typeof r.MES_NUM==='number'?r.MES_NUM:parseInt(r.MES_NUM||0);
+    if (m>=1&&m<=12) fatFlxM[m-1] += r.VALOR;
+  });
+  const fatTotal = fatFlxFe.reduce((s,r)=>s+r.VALOR, 0);
+  const fat = fatTotal>0 ? fatTotal : d.filter(r=>r.STATUS==='Pago 100%').reduce((s,r)=>s+r.VALOR_TOTAL,0);
+  const tick = pago ? fat/pago : 0;
+  const inad = d.filter(r=>r.SALDO_PAGAR>0).reduce((s,r)=>s+r.SALDO_PAGAR,0);
+  document.getElementById('feKpis').innerHTML =
+    '<div class="kpi"><div class="lb">Total festas</div><div class="vl">'+total+'</div></div>'+
+    '<div class="kpi ok"><div class="lb">Pagas 100%</div><div class="vl">'+pago+'</div></div>'+
+    '<div class="kpi w"><div class="lb">Reservas</div><div class="vl">'+res+'</div></div>'+
+    '<div class="kpi pur"><div class="lb">Faturamento</div><div class="vl">'+fmt(fat)+'</div></div>'+
+    '<div class="kpi"><div class="lb">Ticket médio</div><div class="vl">'+fmt(tick)+'</div></div>'+
+    '<div class="kpi err"><div class="lb">Inadimplência</div><div class="vl">'+fmt(inad)+'</div></div>';
+  updC('fecSt',['Pago 100%','Pagando','Reserva'],[{data:[pago,pag,res],backgroundColor:['#16a34a','#2563eb','#9ca3af']}]);
+  updC('fecFat',MSH,[{label:'Faturamento (Fluxo)',data:fatFlxM,backgroundColor:'#db2777'}],scY(fmt));
+  const tM=d.filter(r=>r.TURNO==='Manhã').length,tT=d.filter(r=>r.TURNO==='Tarde').length;
+  updC('fecTur',['Manhã','Tarde'],[{data:[tM,tT],backgroundColor:['#60a5fa','#f59e0b']}]);
+  const modMap = d.filter(r=>r.MODELO).reduce((acc,r)=>{acc[r.MODELO]=(acc[r.MODELO]||0)+1;return acc;},{});
+  const modS = Object.entries(modMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  updC('fecMod',modS.map(e=>e[0]),[{label:'Festas',data:modS.map(e=>e[1]),backgroundColor:'#db2777',borderRadius:4}]);
+  // Pipeline — usa TODOS do ano
+  document.getElementById('piR').textContent=todos.filter(r=>r.STATUS==='Reserva').length;
+  document.getElementById('piP').textContent=todos.filter(r=>r.STATUS==='Pagando').length;
+  document.getElementById('piPg').textContent=todos.filter(r=>r.STATUS==='Pago 100%').length;
+  const mkPipe=(id,items)=>{
+    document.getElementById(id).innerHTML=items.slice(0,25).map(r=>
+      '<div class="pi"><div class="pi-n">'+r.NOME+'</div>'+
+      '<div class="pi-m">'+(r.DATA_FESTA?fmtDate(r.DATA_FESTA):'')+' · '+(r.TURNO||'')+' · '+(r.MODELO||r.TIPO_FESTA||'')+'</div>'+
+      (r.VALOR_TOTAL>0?'<div class="pi-v">'+fmt(r.VALOR_TOTAL)+'</div>':'')+
+      '</div>'
+    ).join('');
+  };
+  // Reservas: apenas a partir de hoje, ordenadas por data
+  const reservasFuturas = todos.filter(r=>r.STATUS==='Reserva'&&r.DATA_FESTA&&new Date(r.DATA_FESTA)>=hoje)
+    .sort((a,b)=>new Date(a.DATA_FESTA)-new Date(b.DATA_FESTA));
+  mkPipe('pipeR', reservasFuturas);
+  // Pago: próximas festinhas (data >= hoje), ordem crescente
+  const pagoProximas = todos.filter(r=>r.STATUS==='Pago 100%'&&r.DATA_FESTA&&new Date(r.DATA_FESTA)>=hoje)
+    .sort((a,b)=>new Date(a.DATA_FESTA)-new Date(b.DATA_FESTA));
+  mkPipe('pipeP', pagoProximas);
+  // Pagando: próximas, ordem crescente
+  const pagandoProximas = todos.filter(r=>r.STATUS==='Pagando'&&r.DATA_FESTA)
+    .sort((a,b)=>new Date(a.DATA_FESTA)-new Date(b.DATA_FESTA));
+  mkPipe('pipePg', pagandoProximas);
+  // Financeiro
+  document.getElementById('feFinK').innerHTML=
+    '<div class="kpi pur"><div class="lb">Faturamento (Fluxo)</div><div class="vl">'+fmt(fat)+'</div></div>'+
+    '<div class="kpi ok"><div class="lb">Ticket médio</div><div class="vl">'+fmt(tick)+'</div></div>'+
+    '<div class="kpi err"><div class="lb">Inadimplência</div><div class="vl">'+fmt(inad)+'</div></div>'+
+    '<div class="kpi"><div class="lb">Com saldo</div><div class="vl">'+d.filter(r=>r.SALDO_PAGAR>0).length+'</div></div>';
+  // Ticket Médio por Modelo — usa TODOS do ano (não só mês filtrado)
+  const modMapAll = todos.filter(r=>r.MODELO).reduce((acc,r)=>{acc[r.MODELO]=(acc[r.MODELO]||0)+1;return acc;},{});
+  const tickFe = Object.entries(modMapAll).map(([m]) => {
+    const fs = todos.filter(r=>r.MODELO===m&&r.STATUS==='Pago 100%');
+    const t = fs.length ? fs.reduce((s,r)=>s+r.VALOR_TOTAL,0)/fs.length : 0;
+    return {m, t};
+  }).filter(e=>e.t>0).sort((a,b)=>b.t-a.t).slice(0,8);
+  updC('fecTick',tickFe.map(e=>e.m),[{label:'Ticket',data:tickFe.map(e=>e.t),backgroundColor:'#db2777',borderRadius:4}],scY(fmt));
+  const inadL = d.filter(r=>r.SALDO_PAGAR>0).sort((a,b)=>b.SALDO_PAGAR-a.SALDO_PAGAR);
+  updC('fecInad',inadL.slice(0,10).map(r=>r.NOME.split(' ')[0]),[{label:'Saldo',data:inadL.slice(0,10).map(r=>r.SALDO_PAGAR),backgroundColor:'#dc2626',borderRadius:4}],scY(fmt));
+  document.getElementById('feTbI').innerHTML='<thead><tr><th>#</th><th>Criança</th><th>Contratante</th><th>Telefone</th><th>Data Festa</th><th>Status</th><th>Valor Total</th><th>Saldo a Pagar</th><th><label style=\"cursor:pointer;font-weight:600\"><input type=\"checkbox\" id=\"chkFeTbISoRes\"> Só pendentes</label></th></tr></thead><tbody>'+inadL.filter(r=>!document.getElementById('chkFeTbISoRes')?.checked||!gdGet(r.NOME).resolvido).map((r,i)=>'<tr style="opacity:'+(gdGet(r.NOME).resolvido?'0.45':'1')+'"><td>'+(i+1)+'</td><td style="font-weight:700">'+r.NOME+'</td><td>'+r.CONTRATANTE+'</td><td>'+r.TELEFONE+'</td><td class="c">'+fmtDate(r.DATA_FESTA)+'</td><td><span class="ba ba-w">'+r.STATUS+'</span></td><td class="r">'+fmt(r.VALOR_TOTAL)+'</td><td class="r" style="color:#dc2626;font-weight:700">'+fmt(r.SALDO_PAGAR)+'</td><td>'+gdBtn(r.NOME)+'</td></tr>').join('')+'</tbody>';
+};
+
+// ── 4. renderCal CORRIGIDO — verifica container ─────────
+const renderCal = () => {
+  const mes=parseInt(document.getElementById('calMes')?.value||0);
+  const ano=parseInt(document.getElementById('calAno')?.value||0);
+  if(!mes||!ano) return;
+  const container = document.getElementById('calGrid') || document.getElementById('calCanvas');
+  if (!container) { console.warn('[renderCal] Container calGrid não encontrado'); return; }
+  const pD=new Date(ano,mes-1,1).getDay(), dias=new Date(ano,mes,0).getDate();
+  const fests=DB.fest.filter(r=>r.DATA_FESTA&&new Date(r.DATA_FESTA).getMonth()+1===mes&&new Date(r.DATA_FESTA).getFullYear()===ano);
+  const fPD={};
+  fests.forEach(r=>{const d=new Date(r.DATA_FESTA).getDate();if(!fPD[d])fPD[d]=[];fPD[d].push(r);});
+  const dias_semana=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  let h='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:12px">'+
+    dias_semana.map(d=>'<div style="text-align:center;font-weight:700;color:var(--p);padding:4px">'+d+'</div>').join('');
+  for(let i=0;i<pD;i++) h+='<div></div>';
+  for(let d=1;d<=dias;d++){
+    const fs=fPD[d]||[];
+    const hasF=fs.length>0;
+    h+='<div style="border:1px solid '+(hasF?'var(--p)':'var(--bdr)')+';border-radius:6px;padding:6px 4px;min-height:60px;background:'+(hasF?'#eff6ff':'')+'">'+
+      '<div style="font-weight:700;font-size:13px;color:'+(hasF?'var(--p)':'')+'">'+d+'</div>'+
+      fs.map(f=>'<div style="font-size:10px;background:var(--p);color:#fff;border-radius:3px;padding:2px 4px;margin-top:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" title="'+f.NOME+' — '+f.TURNO+' — '+f.STATUS+'">'+f.NOME.split(' ')[0]+' '+f.TURNO.substring(0,1)+'</div>').join('')+
+      '</div>';
+  }
+  h+='</div>';
+  container.innerHTML=h;
+};
+
+// ── 5. Listeners Festinhas CORRIGIDOS ───────────────────
+
+// Clientes recorrentes — opção "Todos os anos"
+document.getElementById('btnFeR')?.addEventListener('click', () => {
+  const anoSel = document.getElementById('feCRAno').value;
+  const todosAnos = (anoSel === 'todos');
+  const anos = [...new Set(DB.fest.map(r=>r.ANO).filter(Boolean))].sort();
+  if (!todosAnos) {
+    // Modo: recorrentes no ano selecionado que também festejaram em outros anos
+    const nomesAno = new Set(DB.fest.filter(r=>sameAno(r.ANO,anoSel)).map(r=>normN(r.NOME)));
+    const rec=[], vis=new Set();
+    DB.fest.filter(r=>!sameAno(r.ANO,anoSel)&&r.NOME).forEach(r=>{
+      const nn=normN(r.NOME);
+      if(nomesAno.has(nn)&&!vis.has(nn)){
+        vis.add(nn);
+        const hist=DB.fest.filter(f=>normN(f.NOME)===nn);
+        const anosFeitos=[...new Set(hist.map(f=>f.ANO))].sort();
+        rec.push({nome:r.NOME,qtd:hist.length,anos:anosFeitos.join(', '),tel:r.TELEFONE||r.CONTRATANTE||'—'});
+      }
+    });
+    rec.sort((a,b)=>b.qtd-a.qtd);
+    document.getElementById('feCRTb').innerHTML='<thead><tr><th>#</th><th>Criança</th><th>Anos com BnQ</th><th>Total festas</th><th>Contato</th></tr></thead><tbody>'+
+      rec.map((r,i)=>'<tr><td>'+(i+1)+'</td><td style="font-weight:700">'+r.nome+'</td><td>'+r.anos+'</td><td class="c">'+r.qtd+'</td><td>'+r.tel+'</td></tr>').join('')+'</tbody>';
+  } else {
+    // Todos os anos: mostra quem festejou em 2+ anos diferentes
+    const por={};
+    DB.fest.filter(r=>r.NOME).forEach(r=>{
+      const nn=normN(r.NOME);
+      if(!por[nn]) por[nn]={nome:r.NOME,anos:new Set(),tel:r.TELEFONE||r.CONTRATANTE||'—'};
+      por[nn].anos.add(r.ANO);
+    });
+    const rec=Object.values(por).filter(c=>c.anos.size>=2).map(c=>({
+      nome:c.nome, qtd:c.anos.size, anos:[...c.anos].sort().join(', '), tel:c.tel
+    })).sort((a,b)=>b.qtd-a.qtd);
+    document.getElementById('feCRTb').innerHTML='<thead><tr><th>#</th><th>Criança</th><th>Anos com BnQ</th><th>Total anos</th><th>Contato</th></tr></thead><tbody>'+
+      rec.map((r,i)=>'<tr><td>'+(i+1)+'</td><td style="font-weight:700">'+r.nome+'</td><td>'+r.anos+'</td><td class="c" style="color:#16a34a;font-weight:700">'+r.qtd+'</td><td>'+r.tel+'</td></tr>').join('')+'</tbody>';
+  }
+});
+
+// Clientes que Pararam — com botão de mensagem WhatsApp
+document.getElementById('btnFeD')?.addEventListener('click', () => {
+  const anoRef = document.getElementById('feDAno').value;
+  const nomesAno = new Set(DB.fest.filter(r=>sameAno(r.ANO,anoRef)).map(r=>normN(r.NOME)));
+  const dorm=[], vis=new Set();
+  DB.fest.filter(r=>!sameAno(r.ANO,anoRef)&&r.NOME).forEach(r=>{
+    const nn=normN(r.NOME);
+    if(!nomesAno.has(nn)&&!vis.has(nn)){
+      vis.add(nn);
+      const hist=DB.fest.filter(f=>normN(f.NOME)===nn);
+      const uAno=Math.max(...hist.map(f=>parseInt(f.ANO)||0));
+      const tel = hist.find(f=>f.TELEFONE)?.TELEFONE || hist.find(f=>f.CONTRATANTE)?.CONTRATANTE || '—';
+      dorm.push({nome:r.NOME, uAno, qtd:hist.length, tel});
+    }
+  });
+  dorm.sort((a,b)=>b.uAno-a.uAno);
+  const msgWpp = (nome) => {
+    const txt = 'Olá!! o aniversário de "'+nome+'" está chegando e nós do BNQ queremos muuuito estar presente neste ano, assim como já comemoramos juntos com muita diversão e encantamento. O que acha de aproveitar a condição especial para quem já fez festinha conosco? Responde com QUERO que te enviaremos a proposta personalizada!';
+    const enc = btoa(unescape(encodeURIComponent(txt)));
+    return '<button class=\"btn-copiar-msg\" data-msg=\"'+enc+'\" style=\"background:#25d366;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer\">📋 Copiar msg</button>';
+  };
+  document.getElementById('feDTb').innerHTML='<thead><tr><th>#</th><th>Criança</th><th>Último ano</th><th>Total festas</th><th>Contato</th><th>Últ.CT</th><th>Últ.CLF</th><th>Mensagem</th><th><label style=\"cursor:pointer;font-weight:600\"><input type=\"checkbox\" id=\"chkFeDSoRes\"> Só pendentes</label></th></tr></thead><tbody>'+
+    dorm.filter(r=>!document.getElementById('chkFeDSoRes')?.checked||!gdGet(r.nome).resolvido).map((r,i)=>{
+      const uCT=DB.ct.filter(f=>normN(f.NOME)===normN(r.nome)&&f.TIPO==='Realizado'&&f.DATA).sort((a,b)=>new Date(b.DATA)-new Date(a.DATA))[0];
+      const uCLF=DB.col.filter(f=>normN(f.NOME)===normN(r.nome)&&f.TIPO==='Realizado'&&f.DATA).sort((a,b)=>new Date(b.DATA)-new Date(a.DATA))[0];
+      return'<tr style="opacity:'+(gdGet(r.nome).resolvido?'0.45':'1')+'"><td>'+(i+1)+'</td><td style="font-weight:700">'+r.nome+'</td><td class="c">'+r.uAno+'</td><td class="c">'+r.qtd+'</td><td>'+r.tel+'</td><td class="c" style="font-size:11px">'+(uCT?new Date(uCT.DATA).toLocaleDateString('pt-BR'):'—')+'</td><td class="c" style="font-size:11px">'+(uCLF?new Date(uCLF.DATA).toLocaleDateString('pt-BR'):'—')+'</td><td>'+msgWpp(r.nome)+'</td><td>'+gdBtn(r.nome)+'</td></tr>';
+    }).join('')+'</tbody>';
+});
+
+// ── 6. Calendário listener ───────────────────────────────
+document.getElementById('calMes')?.addEventListener('change', renderCal);
+document.getElementById('calAno')?.addEventListener('change', renderCal);
+document.getElementById('btnCalRender')?.addEventListener('click', renderCal);
+
+// ── 7. gdSyncFlags como alias de gdLoadFlags (botão Sincronizar) ─
+
+
+// ── 8. Gestão de Pacotes — mês no select (filtrar por mês) ─
+const renderCtGestao = () => renderGestao(
+  DB.ct,
+  document.getElementById('ctG1').value,
+  document.getElementById('ctG2').value,
+  document.getElementById('ctGPac').value,
+  document.getElementById('ctGTur').value,
+  document.getElementById('ctGSit').value,
+  document.getElementById('ctGOrd').value,
+  'ct'
+);
+const renderColGestao = () => renderGestao(
+  DB.col,
+  document.getElementById('colG1').value,
+  document.getElementById('colG2').value,
+  document.getElementById('colGPac').value,
+  document.getElementById('colGTur').value,
+  document.getElementById('colGSit').value,
+  document.getElementById('colGOrd').value,
+  'col'
+);
+
+
+
 }); // fim DOMContentLoaded
 </script>
 </body></html>
