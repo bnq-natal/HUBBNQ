@@ -195,7 +195,7 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
 <nav class="sb">
   <div class="sb-brand">
     <img id="sbLogo" src="https://tess-cdn.pareto.io/assets/uploads/05514a92-5295-40f3-a3c9-ab53a29a8da0.png" alt="Logo">
-    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v3.9 - 22/05 18:52</p></div>
+    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v4.0 - 22/05 19:00</p></div>
   </div>
   <div class="sb-nav">
     <div class="sb-g">Visão Geral</div>
@@ -1171,7 +1171,10 @@ function gdSyncFromDrive() {
 function gdSyncToDrive() {
   // Salvar flags no localStorage (backup local)
   try { localStorage.setItem('bnq_gdflags', JSON.stringify(GD.flags)); } catch(e) {}
-  if (!GD.TOKEN || !GD.DATA_FILE_ID) return Promise.resolve();
+  if (!GD.TOKEN || !GD.DATA_FILE_ID) {
+    console.warn('[GD] gdSyncToDrive: sem TOKEN ou FILE_ID - TOKEN:', !!GD.TOKEN, 'FILE_ID:', !!GD.DATA_FILE_ID);
+    return Promise.resolve();
+  }
   var data = {
     ct: typeof DB !== 'undefined' ? DB.ct : [],
     col: typeof DB !== 'undefined' ? DB.col : [],
@@ -1179,7 +1182,15 @@ function gdSyncToDrive() {
     flx: typeof DB !== 'undefined' ? DB.flx : [],
     flags: GD.flags, version: 3, updatedAt: new Date().toISOString()
   };
-  return gdWriteData(data);
+  console.log('[GD] Salvando no Drive - ct:', data.ct.length, 'col:', data.col.length, 
+    'fest:', data.fest.length, 'flx:', data.flx.length);
+  return gdWriteData(data).then(function(r) {
+    console.log('[GD] Drive salvo! Status:', r ? r.status : 'ok');
+    return r;
+  }).catch(function(e) {
+    console.error('[GD] Erro ao salvar no Drive:', e);
+    throw e;
+  });
 }
 function gdSync() {
   if (!GD.TOKEN) { gdShowLogin(); return Promise.resolve(); }
@@ -1202,7 +1213,20 @@ function gdSync() {
     // Restaurar Client ID
     var el = document.getElementById('gdClientId'); if (el && GD.CLIENT_ID) el.value = GD.CLIENT_ID;
     gdSetStatus('ok', '\u2601\ufe0f Sincronizado \u2014 ' + new Date().toLocaleTimeString('pt-BR'));
-    alert('\u2705 Dados sincronizados! Navegue pelas abas para ver os dados.');
+    // Verificar o que foi lido do Drive
+    gdReadData().then(function(check) {
+      if (check) {
+        var msg = '\u2705 Sincronizado!\n\nDados no Drive:\n' +
+          'CT: ' + (check.ct ? check.ct.length : 0) + ' registros\n' +
+          'COL: ' + (check.col ? check.col.length : 0) + ' registros\n' +
+          'Festinhas: ' + (check.fest ? check.fest.length : 0) + ' registros\n' +
+          'Fluxo: ' + (check.flx ? check.flx.length : 0) + ' registros';
+        console.log('[GD] Verificacao pos-sync:', msg);
+        alert(msg);
+      } else {
+        alert('\u2705 Sincronizado! (arquivo vazio no Drive)');
+      }
+    }).catch(function() { alert('\u2705 Sincronizado!'); });
   }).catch(function(err) { gdSetStatus('error', 'Erro: ' + err.message); });
 }
 var _autoSaveInterval = null;
@@ -1504,6 +1528,15 @@ async function importBase(file, tipo) {
       updateImpUI(tipo);
       popAll();
       renderHome();
+      // Salvar no Drive automaticamente
+      if (GD.TOKEN && GD.DATA_FILE_ID) {
+        console.log('[GD] Salvando ' + data.length + ' registros de ' + tipo + ' no Drive...');
+        gdSyncToDrive().then(function() { return gdReadData(); }).then(function(check) {
+          if (check) console.log('[GD] Verificacao Drive - ct:', check.ct?check.ct.length:0, 'col:', check.col?check.col.length:0, 'fest:', check.fest?check.fest.length:0, 'flx:', check.flx?check.flx.length:0);
+        }).catch(function(e) { console.error('[GD] Erro ao salvar:', e); });
+      } else {
+        console.warn('[GD] Sem Drive - TOKEN:', !!GD.TOKEN, 'FILE_ID:', !!GD.DATA_FILE_ID);
+      }
       alert('✓ ' + data.length + ' registros (' + tipo + '). Anos: ' + anos.join(', '));
     } catch(err) {
       console.error(err);
