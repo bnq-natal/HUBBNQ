@@ -1016,6 +1016,91 @@ const parseFest = wb => {
 
 // [parseCTCol replaced by patch_bugs]
 
+const parseCTCol = wb => {
+  const aba = wb.SheetNames.find(n => {
+    const nn = n.toLowerCase().replace(/[^a-z0-9]/g,'');
+    return nn.includes('planilha1') || nn.includes('sheet1') || nn === 'plan1';
+  }) || wb.SheetNames[0];
+  const ws = wb.Sheets[aba];
+  if (!ws || !ws['!ref']) throw new Error('Aba nao encontrada. Abas: ' + wb.SheetNames.join(', '));
+  const rawRows = XLSX.utils.sheet_to_json(ws, {defval:'', raw:true, cellDates:true, header:1});
+  if (!rawRows || rawRows.length < 2) throw new Error('Planilha vazia ou sem dados.');
+  const hdr = rawRows[0].map(h => {
+    const s = String(h || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+    return s;
+  });
+  const fi = fn => hdr.findIndex(fn);
+  const idx = {
+    DATA:   fi(h => h === 'data'),
+    MES:    fi(h => h === 'mes' || h.includes('mes')),
+    ANO:    fi(h => h === 'ano'),
+    CODCRI: fi(h => h === 'codcri' || h === 'cod_cri' || h === 'codigo' || h === 'cod'),
+    NOME:   fi(h => h.includes('crianca') || h.includes('crianca') || h.includes('nome') || h === 'aluno'),
+    TIPO:   fi(h => h.includes('tipo')),
+    PACOTE: fi(h => h.includes('pacote')),
+    QTDE:   fi(h => h === 'qtde' || h.includes('hora') || h === 'quantidade'),
+    VALOR:  fi(h => h === 'valor'),
+    TURNO:  fi(h => h.includes('turno')),
+    SALDO:  fi(h => h === 'saldo'),
+  };
+  if (idx.NOME < 0 || idx.ANO < 0) {
+    throw new Error('Colunas obrigatorias nao encontradas. Cabecalho: ' + hdr.slice(0,10).join('|'));
+  }
+  const normTipoLocal = v => {
+    const s = (v||'').toString().toLowerCase().trim();
+    if (s.startsWith('realiz')) return 'Realizado';
+    if (s.startsWith('contrat')) return 'Contratado';
+    return '';
+  };
+  const normPacLocal = v => {
+    if (!v) return '';
+    const s = String(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+    const M = {
+      'pacote te':'Pacote Te', 'pacote salame':'Pacote Salame',
+      'pacote colore':'Pacote Colore', 'pacote mingue':'Pacote Mingue',
+      'pacote dune':'Pacote Dune', 'pacote sorvete':'Pacote Sorvete',
+      'pacote une':'Pacote Une'
+    };
+    return M[s] || v.toString().trim();
+  };
+  const normTurLocal = v => {
+    const s = (v||'').toString().toLowerCase();
+    if (s.includes('manh')) return 'Manh\u00e3';
+    if (s.includes('tarde')) return 'Tarde';
+    return '';
+  };
+  return rawRows.slice(1).map(row => {
+    const dataRaw = row[idx.DATA];
+    let dataStr = '';
+    if (dataRaw instanceof Date) dataStr = dataRaw.toISOString().substring(0, 10);
+    else if (typeof dataRaw === 'number') {
+      const d = new Date(new Date(1899,11,30).getTime() + dataRaw * 86400000);
+      dataStr = d.toISOString().substring(0, 10);
+    } else if (dataRaw) dataStr = String(dataRaw);
+    const mes = String(row[idx.MES] || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().substring(0, 3);
+    const ano = String(row[idx.ANO] || '').replace('.0','').trim();
+    const nome = (row[idx.NOME] || '').toString().trim();
+    const codcri = idx.CODCRI >= 0 ? String(row[idx.CODCRI] || '').trim() : '';
+    return {
+      DATA: dataStr,
+      MES: mes,
+      ANO: ano,
+      NOME: nome,
+      CODCRI: codcri,
+      TIPO: normTipoLocal(row[idx.TIPO]),
+      PACOTE: normPacLocal(row[idx.PACOTE]),
+      QTDE: cl(row[idx.QTDE]),
+      VALOR: cl(row[idx.VALOR]),
+      TURNO: normTurLocal(row[idx.TURNO]),
+      SALDO: cl(row[idx.SALDO])
+    };
+  }).filter(r => {
+    if (!r.ANO || !r.NOME || isNaN(parseInt(r.ANO))) return false;
+    if (/^20\d{2}/.test(r.NOME.trim())) return false;
+    return true;
+  });
+};
+
 const parseFlx = wb => {
   const aba = wb.SheetNames.find(n => norm(n).includes('dash fluxo')) || wb.SheetNames[0];
   const ws = wb.Sheets[aba];
