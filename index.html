@@ -195,7 +195,7 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
 <nav class="sb">
   <div class="sb-brand">
     <img id="sbLogo" src="https://tess-cdn.pareto.io/assets/uploads/05514a92-5295-40f3-a3c9-ab53a29a8da0.png" alt="Logo">
-    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v3.4 - 22/05 18:09</p></div>
+    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v3.5 - 22/05 18:19</p></div>
   </div>
   <div class="sb-nav">
     <div class="sb-g">Visão Geral</div>
@@ -954,51 +954,55 @@ function gdLoadGIS() {
 }
 function gdLogin() {
   if (!GD.CLIENT_ID) { alert('Configure o Client ID primeiro.'); return; }
-  gdSetMsg('Carregando Google Identity Services...');
-  gdLoadGIS().then(function() {
-    gdSetMsg('Abrindo popup de login...');
-    try {
-      var tc = google.accounts.oauth2.initTokenClient({
-        client_id: GD.CLIENT_ID,
-        scope: GD.SCOPE,
-        callback: function(resp) {
-          if (resp.error) {
-            var msg = 'Erro: ' + (resp.error_description || resp.error);
-            gdSetMsg(msg); alert(msg); return;
-          }
-          GD.TOKEN = resp.access_token;
-          GD.TOKEN_TS = Date.now();
-          try {
-            var db = indexedDB.open('BnQ_Hub_v3', 3);
-            db.onsuccess = function(e) {
-              var tx = e.target.result.transaction('meta', 'readwrite');
-              tx.objectStore('meta').put({ token: GD.TOKEN, ts: GD.TOKEN_TS }, 'gdtoken');
-            };
-          } catch(e) {}
-          gdSetMsg('Conectado! Carregando dados...');
-          gdSyncFromDrive().then(function() {
-            gdHideLogin();
-            gdSetStatus('ok', '\u2601\ufe0f Drive conectado');
-            if (typeof popAll === 'function') { popAll(); }
-            if (typeof renderHome === 'function') { renderHome(); }
-            gdStartAutoSave();
-          }).catch(function(err) {
-            gdHideLogin();
-            gdSetStatus('ok', '\u2601\ufe0f Conectado (sem dados previos)');
-            gdStartAutoSave();
-          });
-        },
-        error_callback: function(err) {
-          var msg = 'Erro: ' + (err.message || err.type || 'Popup bloqueado - permita popups para este site');
-          gdSetMsg(msg); alert(msg);
-        }
-      });
-      tc.requestAccessToken({ prompt: 'select_account' });
-    } catch(e) { gdSetMsg('Erro: ' + e.message); alert('Erro: ' + e.message); }
-  }).catch(function(e) {
-    gdSetMsg('Erro ao carregar GIS: ' + e.message);
-    alert('Erro ao carregar Google Identity Services: ' + e.message);
+  // Usar implicit flow com redirect (evita problema de COOP no GitHub Pages)
+  var redirectUri = window.location.origin + window.location.pathname;
+  var authUrl = 'https://accounts.google.com/o/oauth2/v2/auth' +
+    '?client_id=' + encodeURIComponent(GD.CLIENT_ID) +
+    '&redirect_uri=' + encodeURIComponent(redirectUri) +
+    '&response_type=token' +
+    '&scope=' + encodeURIComponent(GD.SCOPE) +
+    '&prompt=select_account';
+  // Salvar estado antes do redirect
+  try { sessionStorage.setItem('bnq_oauth_pending', '1'); } catch(e) {}
+  gdSetMsg('Redirecionando para login Google...');
+  window.location.href = authUrl;
+}
+
+function gdHandleRedirect() {
+  // Verificar se voltou de um redirect OAuth
+  var hash = window.location.hash;
+  if (!hash || !hash.includes('access_token')) return false;
+  var params = {};
+  hash.substring(1).split('&').forEach(function(p) {
+    var kv = p.split('=');
+    params[kv[0]] = decodeURIComponent(kv[1] || '');
   });
+  if (!params.access_token) return false;
+  // Limpar hash da URL
+  history.replaceState(null, '', window.location.pathname);
+  GD.TOKEN = params.access_token;
+  GD.TOKEN_TS = Date.now();
+  // Salvar token
+  try {
+    var db = indexedDB.open('BnQ_Hub_v3', 3);
+    db.onsuccess = function(e) {
+      var tx = e.target.result.transaction('meta', 'readwrite');
+      tx.objectStore('meta').put({ token: GD.TOKEN, ts: GD.TOKEN_TS }, 'gdtoken');
+    };
+  } catch(e) {}
+  gdSetMsg('Conectado! Carregando dados do Drive...');
+  gdSyncFromDrive().then(function() {
+    gdHideLogin();
+    gdSetStatus('ok', '☁️ Drive conectado');
+    if (typeof popAll === 'function') popAll();
+    if (typeof renderHome === 'function') renderHome();
+    gdStartAutoSave();
+  }).catch(function(err) {
+    gdHideLogin();
+    gdSetStatus('ok', '☁️ Conectado (sem dados previos)');
+    gdStartAutoSave();
+  });
+  return true;
 }
 function gdConfigureAndLogin() {
   var el = document.getElementById('gdClientIdLogin');
@@ -1185,6 +1189,8 @@ function gdConfigure() {
 }
 function gdLoadFlags() { return gdSync(); }
 function gdLoadConfig() {
+  // Verificar se voltou de redirect OAuth
+  if (gdHandleRedirect()) return;
   try {
     var req = indexedDB.open('BnQ_Hub_v3', 3);
     req.onsuccess = function(e) {
