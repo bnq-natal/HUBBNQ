@@ -195,7 +195,7 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
 <nav class="sb">
   <div class="sb-brand">
     <img id="sbLogo" src="https://tess-cdn.pareto.io/assets/uploads/05514a92-5295-40f3-a3c9-ab53a29a8da0.png" alt="Logo">
-    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v4.8 - 22/05 20:12</p></div>
+    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v4.9 - 22/05 20:30</p></div>
   </div>
   <div class="sb-nav">
     <div class="sb-g">Visão Geral</div>
@@ -919,8 +919,10 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
 </div><!-- /layout -->
 <script>
 // ── Variáveis globais do DB ──────────────────────────────────
-var DB = {ct:[], col:[], fest:[], flx:[], meta:{ct:{},col:{},fest:{},flx:{}}};
-var CH = {};
+window.DB = window.DB || {ct:[], col:[], fest:[], flx:[], meta:{ct:{},col:{},fest:{},flx:{}}};
+window.CH = window.CH || {};
+var DB = window.DB;
+var CH = window.CH;
 
 // ── Módulo Google Drive v3 ──────────────────────────────────
 var GD = {
@@ -1151,7 +1153,7 @@ function gdSyncFromDrive() {
     var saves = [];
     if (typeof iSet === 'function') {
       if (remote.ct && remote.ct.length) {
-        DB.ct = remote.ct;
+        window.DB.ct = remote.ct; DB.ct = remote.ct;
         saves.push(iSet('bases', 'ct', remote.ct));
         saves.push(iSet('meta', 'ct', {count: remote.ct.length, lastDate: '', importedAt: new Date().toLocaleString('pt-BR')}));
       }
@@ -1427,7 +1429,8 @@ function gdLoadConfig() {
 </script>
 <script>document.addEventListener('DOMContentLoaded',()=>{
 Chart.register(ChartDataLabels);
-// DB e CH movidos para escopo global (ver script GD)
+// Usar DB global (declarado no script GD)
+var DB = window.DB; var CH = window.CH;
 let ctAgr=false,flxAgr=false;
 const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const MSH=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
