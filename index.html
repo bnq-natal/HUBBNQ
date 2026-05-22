@@ -195,7 +195,7 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
 <nav class="sb">
   <div class="sb-brand">
     <img id="sbLogo" src="https://tess-cdn.pareto.io/assets/uploads/05514a92-5295-40f3-a3c9-ab53a29a8da0.png" alt="Logo">
-    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v4.0 - 22/05 19:00</p></div>
+    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v4.1 - 22/05 19:08</p></div>
   </div>
   <div class="sb-nav">
     <div class="sb-g">Visão Geral</div>
@@ -1168,20 +1168,23 @@ function gdSyncFromDrive() {
     throw err;
   });
 }
-function gdSyncToDrive() {
+function gdSyncToDrive(overrideData) {
   // Salvar flags no localStorage (backup local)
   try { localStorage.setItem('bnq_gdflags', JSON.stringify(GD.flags)); } catch(e) {}
   if (!GD.TOKEN || !GD.DATA_FILE_ID) {
     console.warn('[GD] gdSyncToDrive: sem TOKEN ou FILE_ID - TOKEN:', !!GD.TOKEN, 'FILE_ID:', !!GD.DATA_FILE_ID);
     return Promise.resolve();
   }
-  var data = {
+  // Usar dados passados diretamente OU ler do DB
+  var data = overrideData || {
     ct: typeof DB !== 'undefined' ? DB.ct : [],
     col: typeof DB !== 'undefined' ? DB.col : [],
     fest: typeof DB !== 'undefined' ? DB.fest : [],
     flx: typeof DB !== 'undefined' ? DB.flx : [],
-    flags: GD.flags, version: 3, updatedAt: new Date().toISOString()
   };
+  data.flags = GD.flags;
+  data.version = 3;
+  data.updatedAt = new Date().toISOString();
   console.log('[GD] Salvando no Drive - ct:', data.ct.length, 'col:', data.col.length, 
     'fest:', data.fest.length, 'flx:', data.flx.length);
   return gdWriteData(data).then(function(r) {
@@ -1528,10 +1531,17 @@ async function importBase(file, tipo) {
       updateImpUI(tipo);
       popAll();
       renderHome();
-      // Salvar no Drive automaticamente
+      // Salvar no Drive automaticamente - passar dados atuais diretamente
       if (GD.TOKEN && GD.DATA_FILE_ID) {
         console.log('[GD] Salvando ' + data.length + ' registros de ' + tipo + ' no Drive...');
-        gdSyncToDrive().then(function() { return gdReadData(); }).then(function(check) {
+        // Construir snapshot atual do DB com os novos dados
+        var snapshot = {
+          ct: DB.ct || [],
+          col: DB.col || [],
+          fest: DB.fest || [],
+          flx: DB.flx || []
+        };
+        gdSyncToDrive(snapshot).then(function() { return gdReadData(); }).then(function(check) {
           if (check) console.log('[GD] Verificacao Drive - ct:', check.ct?check.ct.length:0, 'col:', check.col?check.col.length:0, 'fest:', check.fest?check.fest.length:0, 'flx:', check.flx?check.flx.length:0);
         }).catch(function(e) { console.error('[GD] Erro ao salvar:', e); });
       } else {
