@@ -195,7 +195,7 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
 <nav class="sb">
   <div class="sb-brand">
     <img id="sbLogo" src="https://tess-cdn.pareto.io/assets/uploads/05514a92-5295-40f3-a3c9-ab53a29a8da0.png" alt="Logo">
-    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v4.5 - 22/05 19:46</p></div>
+    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v4.6 - 22/05 19:52</p></div>
   </div>
   <div class="sb-nav">
     <div class="sb-g">Visão Geral</div>
@@ -918,6 +918,10 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
 </div><!-- /main -->
 </div><!-- /layout -->
 <script>
+// ── Variáveis globais do DB ──────────────────────────────────
+var DB = {ct:[], col:[], fest:[], flx:[], meta:{ct:{},col:{},fest:{},flx:{}}};
+var CH = {};
+
 // ── Módulo Google Drive v3 ──────────────────────────────────
 var GD = {
   CLIENT_ID: '',
@@ -1395,8 +1399,7 @@ function gdLoadConfig() {
 </script>
 <script>document.addEventListener('DOMContentLoaded',()=>{
 Chart.register(ChartDataLabels);
-const DB={ct:[],col:[],fest:[],flx:[],meta:{ct:{},col:{},fest:{},flx:{}}};
-const CH={};
+// DB e CH movidos para escopo global (ver script GD)
 let ctAgr=false,flxAgr=false;
 const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const MSH=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
