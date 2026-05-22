@@ -195,7 +195,7 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
 <nav class="sb">
   <div class="sb-brand">
     <img id="sbLogo" src="https://tess-cdn.pareto.io/assets/uploads/05514a92-5295-40f3-a3c9-ab53a29a8da0.png" alt="Logo">
-    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v4.7 - 22/05 19:55</p></div>
+    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v4.8 - 22/05 20:12</p></div>
   </div>
   <div class="sb-nav">
     <div class="sb-g">Visão Geral</div>
@@ -1440,18 +1440,18 @@ const iSet=async(s,k,v)=>{const db=await iOpen();const tx=db.transaction(s,'read
 const iGet=async(s,k)=>{const db=await iOpen();const tx=db.transaction(s,'readonly');const req=tx.objectStore(s).get(k);return new Promise((r,j)=>{req.onsuccess=()=>r(req.result||null);req.onerror=()=>j(req.error);});};
 const iDel=async(s,k)=>{const db=await iOpen();const tx=db.transaction(s,'readwrite');tx.objectStore(s).delete(k);return new Promise((r,j)=>{tx.oncomplete=r;tx.onerror=()=>j(tx.error);});};
 // Utils
-const cl=v=>{if(!v&&v!==0)return 0;const n=parseFloat(v.toString().replace(',','.'));return isNaN(n)?0:n;};
-const fmt=v=>v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-const fmtH=v=>v.toFixed(1)+'h';
-const norm=(t='')=>t.toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
-const normN=n=>norm(n||'').replace(/\s+/g,' ');
-const mIdx=m=>MK.indexOf((m||'').toString().toLowerCase().substring(0,3));
-const mNum=r=>{const i=mIdx(r.MES);return i>=0?i+1:0;};
-const scFn=(val,mp,freq)=>Math.round(Math.min(val/2000,1)*40+Math.max(0,1-mp/24)*40+Math.min(freq/12,1)*20);
-const scBar=s=>{const c=s>=70?'#16a34a':s>=40?'#d97706':'#dc2626';return`<span style="display:inline-flex;align-items:center;gap:3px"><b style="width:20px;font-size:11px">${s}</b><span style="width:48px;height:6px;background:#e2e8f0;border-radius:3px;display:inline-block;overflow:hidden"><span style="width:${s}%;height:100%;background:${c};display:block;border-radius:3px"></span></span></span>`;};
-const pbFill=pct=>{const c=pct>=90?'#dc2626':pct>=70?'#d97706':'#16a34a';return`<span style="display:inline-block;width:72px;height:7px;background:#e9ecef;border-radius:3px;overflow:hidden;vertical-align:middle"><span style="width:${Math.min(pct,100)}%;height:100%;background:${c};display:block;border-radius:3px"></span></span>`;};
+function cl(v){if(!v&&v!==0)return 0;const n=parseFloat(v.toString().replace(',','.'));return isNaN(n)?0:n;}
+function fmt(v){return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+function fmtH(v){return v.toFixed(1)+'h';}
+function norm(t=''){return t.toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();}
+function normN(n){return norm(n||'').replace(/\s+/g,' ');}
+function mIdx(m){return MK.indexOf((m||'').toString().toLowerCase().substring(0,3));}
+function mNum(r){const i=mIdx(r.MES);return i>=0?i+1:0;}
+function scFn(val,mp,freq){return Math.round(Math.min(val/2000,1)*40+Math.max(0,1-mp/24)*40+Math.min(freq/12,1)*20);}
+function scBar(s){const c=s>=70?'#16a34a':s>=40?'#d97706':'#dc2626';return`<span style="display:inline-flex;align-items:center;gap:3px"><b style="width:20px;font-size:11px">${s}</b><span style="width:48px;height:6px;background:#e2e8f0;border-radius:3px;display:inline-block;overflow:hidden"><span style="width:${s}%;height:100%;background:${c};display:block;border-radius:3px"></span></span></span>`;}
+function pbFill(pct){const c=pct>=90?'#dc2626':pct>=70?'#d97706':'#16a34a';return`<span style="display:inline-block;width:72px;height:7px;background:#e9ecef;border-radius:3px;overflow:hidden;vertical-align:middle"><span style="width:${Math.min(pct,100)}%;height:100%;background:${c};display:block;border-radius:3px"></span></span>`;}
 const tagTur=t=>{if(!t)return'';return t==='Manhã'?'<span class="tg tg-m">Manhã</span>':'<span class="tg tg-t">Tarde</span>';};
-const empty=(c,m='Nenhum dado')=>`<tr><td colspan="${c}" style="text-align:center;padding:16px;color:#94a3b8">${m}</td></tr>`;
+function empty(c,m='Nenhum dado'){return `<tr><td colspan="${c}" style="text-align:center;padding:16px;color:#94a3b8">${m}</td></tr>`;}
 const fmtDate=d=>{try{return new Date(d).toLocaleDateString('pt-BR');}catch{return'—';}};
 // Validação de datas festinhas (unico neste arquivo)
 const validFesta=dt=>{if(!dt)return null;if(dt instanceof Date){const a=dt.getFullYear();return a>=2010&&a<=2040?new Date(a,dt.getMonth(),dt.getDate()):null;}if(typeof dt==='number'){const d=new Date(new Date(1899,11,30).getTime()+dt*86400000);return d.getFullYear()>=2010&&d.getFullYear()<=2040?d:null;}return null;};
@@ -1462,29 +1462,29 @@ const normTipo=v=>{const s=(v||'').toString().toLowerCase().trim();if(s.startsWi
 const normTur=v=>{const s=(v||'').toString().toLowerCase();if(s.includes('manh'))return'Manhã';if(s.includes('tarde'))return'Tarde';return'';};
 // FIX P2B: anosOf e funções de filtro robusto (ANO sempre string)
 // anosOf — garante que ANO é sempre string para comparações seguras
-const anosOf=(arr,f='ANO')=>[...new Set(arr.map(r=>{const v=String(r[f]||'').trim();return v;}).filter(v=>v&&!isNaN(parseInt(v))))].sort((a,b)=>parseInt(b)-parseInt(a));
+function anosOf(arr,f='ANO'){return [...new Set(arr.map(r=>{const v=String(r[f]||'').trim();return v;}).filter(v=>v&&!isNaN(parseInt(v))))].sort((a,b)=>parseInt(b)-parseInt(a));}
 // Comparação de ANO: sempre string vs string
 // Filtro de ano robusto
 // [dedup: already declared in hub_p1]
 // mNum: usa campo MES (string 'jan','fev'...) via mIdx
 // [dedup: already declared in hub_p1]
 // mNumFlx: para fluxo MES_NUM já é int correto
-const mNumFlx=r=>typeof r.MES_NUM==='number'?r.MES_NUM:parseInt(r.MES_NUM||0);
+function mNumFlx(r){return typeof r.MES_NUM==='number'?r.MES_NUM:parseInt(r.MES_NUM||0);}
 // Funções de receita via fluxo (agora com comparação robusta)
-const isPacCT=t=>norm(t||'').startsWith('pacote');
-const getGrp=(t='',agr=false)=>{if(agr&&isPacCT(t))return'Contraturno';const s=norm(t);if(s.includes('pacote'))return'Pacotes';if(s.includes('colon'))return'Colônias';if(s.includes('festinha'))return'Festinhas';if(s.includes('aluguel'))return'Aluguel';if(s.includes('evento'))return'Eventos';if(s.includes('oficina'))return'Oficinas';return'Outros';};
-const getTAgr=(t='',agr=false)=>(agr&&isPacCT(t))?'Contraturno':t;
+function isPacCT(t){return norm(t||'').startsWith('pacote');}
+function getGrp(t='',agr=false){if(agr&&isPacCT(t))return'Contraturno';const s=norm(t);if(s.includes('pacote'))return'Pacotes';if(s.includes('colon'))return'Colônias';if(s.includes('festinha'))return'Festinhas';if(s.includes('aluguel'))return'Aluguel';if(s.includes('evento'))return'Eventos';if(s.includes('oficina'))return'Oficinas';return'Outros';}
+function getTAgr(t='',agr=false){return (agr&&isPacCT(t))?'Contraturno':t;}
 // Filtro fluxo com ano robusto
 // [filFlx replaced by mega_patch]
 // Charts
 const mkC=(id,type,opts={})=>{const ctx=document.getElementById(id);if(!ctx)return null;if(CH[id])CH[id].destroy();CH[id]=new Chart(ctx.getContext('2d'),{type,data:{labels:[],datasets:[]},options:{responsive:true,maintainAspectRatio:false,plugins:{datalabels:{display:false},legend:{display:type==='pie'||type==='doughnut'}},...opts}});return CH[id];};
 const updC=(id,labels,datasets,opts={})=>{const c=CH[id];if(!c)return;c.data.labels=labels;c.data.datasets=datasets;if(opts.scales)c.options.scales=opts.scales;c.update();};
 const scY=cb=>({scales:{y:{beginAtZero:true,ticks:{callback:cb||(v=>v)}}}});
-const popSel=(id,opts,def=null)=>{const sel=document.getElementById(id);if(!sel)return;const cur=sel.value;sel.innerHTML='';opts.forEach(o=>{const el=document.createElement('option');el.value=typeof o==='object'?o.v:o;el.textContent=typeof o==='object'?o.t:o;sel.appendChild(el);});sel.value=def||(Array.from(sel.options).some(o=>o.value===cur)?cur:(sel.options[0]?.value||''));};
+function popSel(id,opts,def=null){const sel=document.getElementById(id);if(!sel)return;const cur=sel.value;sel.innerHTML='';opts.forEach(o=>{const el=document.createElement('option');el.value=typeof o==='object'?o.v:o;el.textContent=typeof o==='object'?o.t:o;sel.appendChild(el);});sel.value=def||(Array.from(sel.options).some(o=>o.value===cur)?cur:(sel.options[0]?.value||''));};
 // [mOpts replaced by patch_bugs]
-const mN=()=>MESES.map((m,i)=>({v:String(i+1),t:m}));
-const aO=arr=>arr.map(a=>({v:String(a),t:String(a)}));
-const aON=arr=>[{v:'',t:'Nenhum'},...arr.map(a=>({v:String(a),t:String(a)}))];
+function mN(){return MESES.map((m,i)=>({v:String(i+1),t:m}));}
+function aO(arr){return arr.map(a=>({v:String(a),t:String(a)}));}
+function aON(arr){return [{v:'',t:'Nenhum'},...arr.map(a=>({v:String(a),t:String(a)}))];}
 
 // ══ FUNÇÕES ══
 const parseFest = wb => {
@@ -1522,7 +1522,7 @@ const parseFest = wb => {
     });
   }
   return result;
-};
+}
 
 // [parseCTCol replaced by patch_bugs]
 
