@@ -195,7 +195,7 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
 <nav class="sb">
   <div class="sb-brand">
     <img id="sbLogo" src="https://tess-cdn.pareto.io/assets/uploads/05514a92-5295-40f3-a3c9-ab53a29a8da0.png" alt="Logo">
-    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v4.1 - 22/05 19:08</p></div>
+    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v4.2 - 22/05 19:12</p></div>
   </div>
   <div class="sb-nav">
     <div class="sb-g">Visão Geral</div>
@@ -1199,6 +1199,7 @@ function gdSync() {
   if (!GD.TOKEN) { gdShowLogin(); return Promise.resolve(); }
   gdSetStatus('syncing', 'Sincronizando...');
   return gdFindOrCreate().then(function() { return gdReadData(); }).then(function(remote) {
+    // Merge: Drive -> DB (dados do Drive têm prioridade se DB estiver vazio)
     if (remote) {
       GD.flags = mergeFlags(GD.flags, remote.flags || {});
       try { localStorage.setItem('bnq_gdflags', JSON.stringify(GD.flags)); } catch(e) {}
@@ -1209,7 +1210,18 @@ function gdSync() {
         if (remote.flx && remote.flx.length) { DB.flx = remote.flx; if(typeof updateImpUI==='function') updateImpUI('flx'); }
       }
     }
-    return gdSyncToDrive();
+    // Merge: DB -> Drive (só envia se DB tiver dados)
+    // Não sobrescrever Drive com DB vazio!
+    var dbHasData = typeof DB !== 'undefined' && 
+      ((DB.ct && DB.ct.length > 0) || (DB.col && DB.col.length > 0) || 
+       (DB.fest && DB.fest.length > 0) || (DB.flx && DB.flx.length > 0));
+    if (dbHasData) {
+      console.log('[GD] DB tem dados - enviando para Drive');
+      return gdSyncToDrive();
+    } else {
+      console.log('[GD] DB vazio - nao sobrescrevendo Drive');
+      return Promise.resolve();
+    }
   }).then(function() {
     if (typeof popAll === 'function') popAll();
     if (typeof renderHome === 'function') renderHome();
