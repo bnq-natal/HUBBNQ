@@ -195,7 +195,7 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
 <nav class="sb">
   <div class="sb-brand">
     <img id="sbLogo" src="https://tess-cdn.pareto.io/assets/uploads/05514a92-5295-40f3-a3c9-ab53a29a8da0.png" alt="Logo">
-    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v3.5 - 22/05 18:19</p></div>
+    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v3.6 - 22/05 18:31</p></div>
   </div>
   <div class="sb-nav">
     <div class="sb-g">Visão Geral</div>
@@ -969,26 +969,26 @@ function gdLogin() {
 }
 
 function gdHandleRedirect() {
-  // Verificar se voltou de um redirect OAuth
   var hash = window.location.hash;
   if (!hash || !hash.includes('access_token')) return false;
   var params = {};
   hash.substring(1).split('&').forEach(function(p) {
     var kv = p.split('=');
-    params[kv[0]] = decodeURIComponent(kv[1] || '');
+    params[kv[0]] = decodeURIComponent((kv[1] || '').replace(/\+/g,' '));
   });
   if (!params.access_token) return false;
-  // Limpar hash da URL
+  // Limpar hash da URL imediatamente
   history.replaceState(null, '', window.location.pathname);
   GD.TOKEN = params.access_token;
   GD.TOKEN_TS = Date.now();
-  // Salvar token
+  // Salvar token no localStorage
+  try { localStorage.setItem('bnq_gdtoken', JSON.stringify({ token: GD.TOKEN, ts: GD.TOKEN_TS })); } catch(e) {}
+  // Recuperar Client ID salvo antes do redirect
   try {
-    var db = indexedDB.open('BnQ_Hub_v3', 3);
-    db.onsuccess = function(e) {
-      var tx = e.target.result.transaction('meta', 'readwrite');
-      tx.objectStore('meta').put({ token: GD.TOKEN, ts: GD.TOKEN_TS }, 'gdtoken');
-    };
+    var cfg = JSON.parse(localStorage.getItem('bnq_gdconfig') || 'null');
+    if (cfg && cfg.CLIENT_ID) GD.CLIENT_ID = cfg.CLIENT_ID;
+    var flags = JSON.parse(localStorage.getItem('bnq_gdflags') || 'null');
+    if (flags) GD.flags = flags;
   } catch(e) {}
   gdSetMsg('Conectado! Carregando dados do Drive...');
   gdSyncFromDrive().then(function() {
@@ -998,8 +998,10 @@ function gdHandleRedirect() {
     if (typeof renderHome === 'function') renderHome();
     gdStartAutoSave();
   }).catch(function(err) {
+    console.error('Sync error:', err);
     gdHideLogin();
     gdSetStatus('ok', '☁️ Conectado (sem dados previos)');
+    if (typeof popAll === 'function') popAll();
     gdStartAutoSave();
   });
   return true;
@@ -1009,13 +1011,7 @@ function gdConfigureAndLogin() {
   var cid = el ? el.value.trim() : '';
   if (!cid) { alert('Informe o Client ID OAuth 2.0.'); return; }
   GD.CLIENT_ID = cid;
-  try {
-    var db = indexedDB.open('BnQ_Hub_v3', 3);
-    db.onsuccess = function(e) {
-      var tx = e.target.result.transaction('meta', 'readwrite');
-      tx.objectStore('meta').put({ CLIENT_ID: cid }, 'gdconfig');
-    };
-  } catch(e) {}
+  try { localStorage.setItem('bnq_gdconfig', JSON.stringify({ CLIENT_ID: cid })); } catch(e) {}
   var el2 = document.getElementById('gdClientId'); if (el2) el2.value = cid;
   ['btnGdLogin','btnGdLoginCfg','btnLoginGoogle'].forEach(function(id) {
     var b = document.getElementById(id); if (b) b.style.display = 'inline-flex';
@@ -1086,6 +1082,8 @@ function gdSyncFromDrive() {
   });
 }
 function gdSyncToDrive() {
+  // Salvar flags no localStorage (backup local)
+  try { localStorage.setItem('bnq_gdflags', JSON.stringify(GD.flags)); } catch(e) {}
   if (!GD.TOKEN || !GD.DATA_FILE_ID) return Promise.resolve();
   var data = {
     ct: typeof DB !== 'undefined' ? DB.ct : [],
@@ -1128,10 +1126,11 @@ function gdToggle(nome) {
   var key = nome.toLowerCase().trim();
   var atual = GD.flags[key] && GD.flags[key].resolvido;
   GD.flags[key] = { nome: nome, resolvido: !atual, ts: new Date().toISOString() };
+  try { localStorage.setItem('bnq_gdflags', JSON.stringify(GD.flags)); } catch(e) {}
   gdSyncToDrive();
   document.querySelectorAll('[data-gdkey="' + key + '"]').forEach(function(btn) {
     var res = GD.flags[key].resolvido;
-    btn.textContent = res ? '\u2705 Resolvido' : '\u25cb Pendente';
+    btn.textContent = res ? '✅ Resolvido' : '○ Pendente';
     btn.style.background = res ? '#dcfce7' : '#f1f5f9';
     btn.style.color = res ? '#166534' : '#475569';
     var tr = btn.closest('tr'); if (tr) tr.style.opacity = res ? '0.45' : '1';
@@ -1181,8 +1180,9 @@ function gdConfigure() {
   var cid = el ? el.value.trim() : '';
   if (!cid) { alert('Informe o Client ID.'); return; }
   GD.CLIENT_ID = cid;
+  try { localStorage.setItem('bnq_gdconfig', JSON.stringify({ CLIENT_ID: cid })); } catch(e) {}
   if (el) el.style.borderColor = '#16a34a';
-  gdSetStatus('off', 'Client ID salvo \u2014 clique em Conectar');
+  gdSetStatus('off', 'Client ID salvo — clique em Conectar');
   ['btnGdLogin','btnGdLoginCfg'].forEach(function(id) {
     var b = document.getElementById(id); if (b) b.style.display = 'inline-flex';
   });
@@ -1191,59 +1191,50 @@ function gdLoadFlags() { return gdSync(); }
 function gdLoadConfig() {
   // Verificar se voltou de redirect OAuth
   if (gdHandleRedirect()) return;
+  
+  // Usar localStorage (não bloqueado por Tracking Prevention)
   try {
-    var req = indexedDB.open('BnQ_Hub_v3', 3);
-    req.onsuccess = function(e) {
-      var db = e.target.result;
-      var tx = db.transaction('meta', 'readonly');
-      var cfg_req = tx.objectStore('meta').get('gdconfig');
-      cfg_req.onsuccess = function() {
-        var cfg = cfg_req.result;
-        if (cfg && cfg.CLIENT_ID) {
-          GD.CLIENT_ID = cfg.CLIENT_ID;
-          var el = document.getElementById('gdClientId'); if (el) el.value = GD.CLIENT_ID;
-          var el2 = document.getElementById('gdClientIdLogin'); if (el2) el2.value = GD.CLIENT_ID;
-          ['btnGdLogin','btnGdLoginCfg','btnLoginGoogle'].forEach(function(id) {
-            var b = document.getElementById(id); if (b) b.style.display = 'inline-flex';
-          });
-        }
-        var tx2 = db.transaction('meta', 'readonly');
-        var flags_req = tx2.objectStore('meta').get('gdflags');
-        flags_req.onsuccess = function() {
-          if (flags_req.result) GD.flags = flags_req.result;
-          var tx3 = db.transaction('meta', 'readonly');
-          var token_req = tx3.objectStore('meta').get('gdtoken');
-          token_req.onsuccess = function() {
-            var saved = token_req.result;
-            if (saved && saved.token && (Date.now() - saved.ts) < 8 * 60 * 60 * 1000) {
-              GD.TOKEN = saved.token;
-              GD.TOKEN_TS = saved.ts;
-              gdSetStatus('syncing', 'Reconectando...');
-              gdSyncFromDrive().then(function() {
-                gdHideLogin();
-                gdSetStatus('ok', '\u2601\ufe0f Drive reconectado');
-                if (typeof popAll === 'function') popAll();
-                if (typeof renderHome === 'function') renderHome();
-                gdStartAutoSave();
-              }).catch(function() {
-                GD.TOKEN = null;
-                gdSetStatus('off', 'Sess\u00e3o expirada \u2014 fa\u00e7a login');
-                gdShowLogin();
-              });
-            } else {
-              gdShowLogin();
-              if (!cfg || !cfg.CLIENT_ID) {
-                gdSetMsg('Configure o Client ID abaixo para continuar');
-              } else {
-                gdSetMsg('Clique em Entrar com Google para continuar');
-              }
-            }
-          };
-        };
-      };
-    };
-    req.onerror = function() { gdShowLogin(); };
-  } catch(e) { gdShowLogin(); }
+    var cfg = JSON.parse(localStorage.getItem('bnq_gdconfig') || 'null');
+    if (cfg && cfg.CLIENT_ID) {
+      GD.CLIENT_ID = cfg.CLIENT_ID;
+      var el = document.getElementById('gdClientId'); if (el) el.value = GD.CLIENT_ID;
+      var el2 = document.getElementById('gdClientIdLogin'); if (el2) el2.value = GD.CLIENT_ID;
+      ['btnGdLogin','btnGdLoginCfg','btnLoginGoogle'].forEach(function(id) {
+        var b = document.getElementById(id); if (b) b.style.display = 'inline-flex';
+      });
+    }
+    var flags = JSON.parse(localStorage.getItem('bnq_gdflags') || 'null');
+    if (flags) GD.flags = flags;
+    
+    var saved = JSON.parse(localStorage.getItem('bnq_gdtoken') || 'null');
+    if (saved && saved.token && (Date.now() - saved.ts) < 8 * 60 * 60 * 1000) {
+      GD.TOKEN = saved.token;
+      GD.TOKEN_TS = saved.ts;
+      gdSetStatus('syncing', 'Reconectando...');
+      gdSyncFromDrive().then(function() {
+        gdHideLogin();
+        gdSetStatus('ok', '☁️ Drive reconectado');
+        if (typeof popAll === 'function') popAll();
+        if (typeof renderHome === 'function') renderHome();
+        gdStartAutoSave();
+      }).catch(function() {
+        GD.TOKEN = null;
+        localStorage.removeItem('bnq_gdtoken');
+        gdSetStatus('off', 'Sessão expirada — faça login');
+        gdShowLogin();
+      });
+    } else {
+      gdShowLogin();
+      if (!cfg || !cfg.CLIENT_ID) {
+        gdSetMsg('Configure o Client ID abaixo para continuar');
+      } else {
+        gdSetMsg('Clique em Entrar com Google para continuar');
+      }
+    }
+  } catch(e) {
+    console.error('gdLoadConfig error:', e);
+    gdShowLogin();
+  }
 }
 </script>
 <script>document.addEventListener('DOMContentLoaded',()=>{
