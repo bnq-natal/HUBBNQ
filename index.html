@@ -195,7 +195,7 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
 <nav class="sb">
   <div class="sb-brand">
     <img id="sbLogo" src="https://tess-cdn.pareto.io/assets/uploads/05514a92-5295-40f3-a3c9-ab53a29a8da0.png" alt="Logo">
-    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v3.6 - 22/05 18:31</p></div>
+    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v3.8 - 22/05 18:45</p></div>
   </div>
   <div class="sb-nav">
     <div class="sb-g">Visão Geral</div>
@@ -977,33 +977,57 @@ function gdHandleRedirect() {
     params[kv[0]] = decodeURIComponent((kv[1] || '').replace(/\+/g,' '));
   });
   if (!params.access_token) return false;
+  console.log('[GD] Token recebido via redirect!');
   // Limpar hash da URL imediatamente
   history.replaceState(null, '', window.location.pathname);
   GD.TOKEN = params.access_token;
   GD.TOKEN_TS = Date.now();
-  // Salvar token no localStorage
+  // Salvar token
   try { localStorage.setItem('bnq_gdtoken', JSON.stringify({ token: GD.TOKEN, ts: GD.TOKEN_TS })); } catch(e) {}
-  // Recuperar Client ID salvo antes do redirect
+  // Recuperar Client ID e flags salvos antes do redirect
   try {
     var cfg = JSON.parse(localStorage.getItem('bnq_gdconfig') || 'null');
-    if (cfg && cfg.CLIENT_ID) GD.CLIENT_ID = cfg.CLIENT_ID;
+    if (cfg && cfg.CLIENT_ID) {
+      GD.CLIENT_ID = cfg.CLIENT_ID;
+      // Restaurar campo de Client ID na tela
+      var el = document.getElementById('gdClientId'); if (el) el.value = GD.CLIENT_ID;
+      var el2 = document.getElementById('gdClientIdLogin'); if (el2) el2.value = GD.CLIENT_ID;
+      console.log('[GD] Client ID restaurado: ' + GD.CLIENT_ID.substring(0,20) + '...');
+    }
     var flags = JSON.parse(localStorage.getItem('bnq_gdflags') || 'null');
-    if (flags) GD.flags = flags;
-  } catch(e) {}
+    if (flags) { GD.flags = flags; console.log('[GD] Flags restaurados: ' + Object.keys(flags).length); }
+  } catch(e) { console.error('[GD] Erro ao restaurar config:', e); }
+  
   gdSetMsg('Conectado! Carregando dados do Drive...');
-  gdSyncFromDrive().then(function() {
-    gdHideLogin();
-    gdSetStatus('ok', '☁️ Drive conectado');
-    if (typeof popAll === 'function') popAll();
-    if (typeof renderHome === 'function') renderHome();
-    gdStartAutoSave();
-  }).catch(function(err) {
-    console.error('Sync error:', err);
-    gdHideLogin();
-    gdSetStatus('ok', '☁️ Conectado (sem dados previos)');
-    if (typeof popAll === 'function') popAll();
-    gdStartAutoSave();
-  });
+  
+  // Aguardar DOM + DB estarem prontos
+  var doSync = function() {
+    console.log('[GD] Iniciando sync apos redirect...');
+    console.log('[GD] DB disponivel:', typeof DB !== 'undefined');
+    gdSyncFromDrive().then(function() {
+      gdHideLogin();
+      gdSetStatus('ok', '\u2601\ufe0f Drive conectado');
+      // Restaurar Client ID nos campos de configuracao
+      var el3 = document.getElementById('gdClientId'); if (el3 && GD.CLIENT_ID) el3.value = GD.CLIENT_ID;
+      if (typeof popAll === 'function') { popAll(); console.log('[GD] popAll OK'); }
+      if (typeof renderHome === 'function') { renderHome(); console.log('[GD] renderHome OK'); }
+      gdStartAutoSave();
+    }).catch(function(err) {
+      console.error('[GD] Sync error:', err);
+      gdHideLogin();
+      gdSetStatus('ok', '\u2601\ufe0f Conectado (sem dados previos)');
+      var el3 = document.getElementById('gdClientId'); if (el3 && GD.CLIENT_ID) el3.value = GD.CLIENT_ID;
+      if (typeof popAll === 'function') popAll();
+      gdStartAutoSave();
+    });
+  };
+  
+  // Aguardar 1 segundo para garantir que tudo carregou
+  if (document.readyState === 'complete') {
+    setTimeout(doSync, 1000);
+  } else {
+    window.addEventListener('load', function() { setTimeout(doSync, 500); });
+  }
   return true;
 }
 function gdConfigureAndLogin() {
@@ -1064,21 +1088,40 @@ function mergeFlags(local, remote) {
   return merged;
 }
 function gdSyncFromDrive() {
-  return gdFindOrCreate().then(function() { return gdReadData(); }).then(function(remote) {
-    if (!remote) return;
+  console.log('[GD] Iniciando sync do Drive... TOKEN:', GD.TOKEN ? GD.TOKEN.substring(0,20)+'...' : 'NULO');
+  if (!GD.TOKEN) {
+    console.error('[GD] Sem token! Nao e possivel sincronizar.');
+    return Promise.reject(new Error('Sem token de autenticacao'));
+  }
+  return gdFindOrCreate().then(function() {
+    console.log('[GD] Arquivo no Drive: ' + GD.DATA_FILE_ID);
+    return gdReadData();
+  }).then(function(remote) {
+    console.log('[GD] Resposta do Drive:', remote ? JSON.stringify({
+      ct: remote.ct ? remote.ct.length : 0,
+      col: remote.col ? remote.col.length : 0,
+      fest: remote.fest ? remote.fest.length : 0,
+      flx: remote.flx ? remote.flx.length : 0,
+      flags: remote.flags ? Object.keys(remote.flags).length : 0
+    }) : 'NULO');
+    if (!remote) { GD.ready = true; return; }
     GD.flags = mergeFlags(GD.flags, remote.flags || {});
+    try { localStorage.setItem('bnq_gdflags', JSON.stringify(GD.flags)); } catch(e) {}
     if (typeof DB !== 'undefined') {
-      var updated = false;
-      if (remote.ct && remote.ct.length) { DB.ct = remote.ct; updated = true; if(typeof updateImpUI==='function') updateImpUI('ct'); }
-      if (remote.col && remote.col.length) { DB.col = remote.col; updated = true; if(typeof updateImpUI==='function') updateImpUI('col'); }
-      if (remote.fest && remote.fest.length) { DB.fest = remote.fest; updated = true; if(typeof updateImpUI==='function') updateImpUI('fest'); }
-      if (remote.flx && remote.flx.length) { DB.flx = remote.flx; updated = true; if(typeof updateImpUI==='function') updateImpUI('flx'); }
-      if (updated) {
-        if (typeof popAll === 'function') popAll();
-        if (typeof renderHome === 'function') renderHome();
-      }
+      if (remote.ct && remote.ct.length) { DB.ct = remote.ct; if(typeof updateImpUI==='function') updateImpUI('ct'); }
+      if (remote.col && remote.col.length) { DB.col = remote.col; if(typeof updateImpUI==='function') updateImpUI('col'); }
+      if (remote.fest && remote.fest.length) { DB.fest = remote.fest; if(typeof updateImpUI==='function') updateImpUI('fest'); }
+      if (remote.flx && remote.flx.length) { DB.flx = remote.flx; if(typeof updateImpUI==='function') updateImpUI('flx'); }
+      if (typeof popAll === 'function') popAll();
+      if (typeof renderHome === 'function') renderHome();
+      console.log('[GD] DB atualizado e tela renderizada!');
+    } else {
+      console.error('[GD] DB nao disponivel!');
     }
     GD.ready = true;
+  }).catch(function(err) {
+    console.error('[GD] Erro no sync:', err.message || err);
+    throw err;
   });
 }
 function gdSyncToDrive() {
@@ -1100,6 +1143,7 @@ function gdSync() {
   return gdFindOrCreate().then(function() { return gdReadData(); }).then(function(remote) {
     if (remote) {
       GD.flags = mergeFlags(GD.flags, remote.flags || {});
+      try { localStorage.setItem('bnq_gdflags', JSON.stringify(GD.flags)); } catch(e) {}
       if (typeof DB !== 'undefined') {
         if (remote.ct && remote.ct.length) { DB.ct = remote.ct; if(typeof updateImpUI==='function') updateImpUI('ct'); }
         if (remote.col && remote.col.length) { DB.col = remote.col; if(typeof updateImpUI==='function') updateImpUI('col'); }
@@ -1111,8 +1155,10 @@ function gdSync() {
   }).then(function() {
     if (typeof popAll === 'function') popAll();
     if (typeof renderHome === 'function') renderHome();
-    gdSetStatus('ok', '☁️ Sincronizado — ' + new Date().toLocaleTimeString('pt-BR'));
-    alert('✅ Dados sincronizados! Navegue pelas abas para ver os dados.');
+    // Restaurar Client ID
+    var el = document.getElementById('gdClientId'); if (el && GD.CLIENT_ID) el.value = GD.CLIENT_ID;
+    gdSetStatus('ok', '\u2601\ufe0f Sincronizado \u2014 ' + new Date().toLocaleTimeString('pt-BR'));
+    alert('\u2705 Dados sincronizados! Navegue pelas abas para ver os dados.');
   }).catch(function(err) { gdSetStatus('error', 'Erro: ' + err.message); });
 }
 var _autoSaveInterval = null;
