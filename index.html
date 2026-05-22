@@ -195,7 +195,7 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
 <nav class="sb">
   <div class="sb-brand">
     <img id="sbLogo" src="https://tess-cdn.pareto.io/assets/uploads/05514a92-5295-40f3-a3c9-ab53a29a8da0.png" alt="Logo">
-    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v3.8 - 22/05 18:45</p></div>
+    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v3.9 - 22/05 18:52</p></div>
   </div>
   <div class="sb-nav">
     <div class="sb-g">Visão Geral</div>
@@ -1022,11 +1022,20 @@ function gdHandleRedirect() {
     });
   };
   
-  // Aguardar 1 segundo para garantir que tudo carregou
-  if (document.readyState === 'complete') {
-    setTimeout(doSync, 1000);
+  // Aguardar DOMContentLoaded + carregarTudo antes de sincronizar
+  // Usar evento customizado que carregarTudo dispara quando termina
+  if (window._bnqReady) {
+    // DB já está pronto
+    setTimeout(doSync, 200);
   } else {
-    window.addEventListener('load', function() { setTimeout(doSync, 500); });
+    // Aguardar o evento de DB pronto
+    window.addEventListener('bnq:ready', function() {
+      setTimeout(doSync, 200);
+    }, { once: true });
+    // Fallback: aguardar 3 segundos
+    setTimeout(function() {
+      if (!window._bnqSyncDone) doSync();
+    }, 3000);
   }
   return true;
 }
@@ -1070,8 +1079,25 @@ function gdFindOrCreate() {
 function gdReadData() {
   return fetch('https://www.googleapis.com/drive/v3/files/' + GD.DATA_FILE_ID + '?alt=media',
     { headers: { Authorization: 'Bearer ' + GD.TOKEN } })
-  .then(function(r) { return r.ok ? r.json() : null; })
-  .catch(function() { return null; });
+  .then(function(r) {
+    if (!r.ok) { console.error('[GD] Erro ao ler arquivo:', r.status); return null; }
+    return r.json();
+  })
+  .then(function(data) {
+    if (!data) return null;
+    // Verificar se os dados são válidos (não apenas o arquivo vazio inicial)
+    var hasData = (data.ct && data.ct.length > 0) || 
+                  (data.col && data.col.length > 0) || 
+                  (data.fest && data.fest.length > 0) || 
+                  (data.flx && data.flx.length > 0);
+    console.log('[GD] Arquivo lido - tem dados:', hasData, 
+      'ct:', data.ct ? data.ct.length : 0,
+      'col:', data.col ? data.col.length : 0,
+      'fest:', data.fest ? data.fest.length : 0,
+      'flx:', data.flx ? data.flx.length : 0);
+    return data;
+  })
+  .catch(function(e) { console.error('[GD] Erro ao ler:', e); return null; });
 }
 function gdWriteData(data) {
   if (!GD.TOKEN || !GD.DATA_FILE_ID) return Promise.resolve();
@@ -1116,7 +1142,25 @@ function gdSyncFromDrive() {
       if (typeof renderHome === 'function') renderHome();
       console.log('[GD] DB atualizado e tela renderizada!');
     } else {
-      console.error('[GD] DB nao disponivel!');
+      console.error('[GD] DB nao disponivel! Aguardando...');
+      // Aguardar DB ficar disponível
+      var waitForDB = function(attempts) {
+        if (typeof DB !== 'undefined') {
+          console.log('[GD] DB disponivel agora! Aplicando dados...');
+          if (remote.ct && remote.ct.length) { DB.ct = remote.ct; if(typeof updateImpUI==='function') updateImpUI('ct'); }
+          if (remote.col && remote.col.length) { DB.col = remote.col; if(typeof updateImpUI==='function') updateImpUI('col'); }
+          if (remote.fest && remote.fest.length) { DB.fest = remote.fest; if(typeof updateImpUI==='function') updateImpUI('fest'); }
+          if (remote.flx && remote.flx.length) { DB.flx = remote.flx; if(typeof updateImpUI==='function') updateImpUI('flx'); }
+          if (typeof popAll === 'function') popAll();
+          if (typeof renderHome === 'function') renderHome();
+          console.log('[GD] Dados aplicados apos espera!');
+        } else if (attempts > 0) {
+          setTimeout(function() { waitForDB(attempts - 1); }, 500);
+        } else {
+          console.error('[GD] DB nunca ficou disponivel');
+        }
+      };
+      waitForDB(10); // tentar por até 5 segundos
     }
     GD.ready = true;
   }).catch(function(err) {
@@ -1489,6 +1533,9 @@ async function carregarTudo() {
   }
   popAll();
   renderHome();
+  // Sinalizar que DB está pronto
+  window._bnqReady = true;
+  window.dispatchEvent(new Event('bnq:ready'));
 };
 
 function sameAno(rAno,filtroAno){ return String(rAno).trim()===String(filtroAno).trim(); }
