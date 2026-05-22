@@ -195,7 +195,7 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
 <nav class="sb">
   <div class="sb-brand">
     <img id="sbLogo" src="https://tess-cdn.pareto.io/assets/uploads/05514a92-5295-40f3-a3c9-ab53a29a8da0.png" alt="Logo">
-    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v4.4 - 22/05 19:22</p></div>
+    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v4.5 - 22/05 19:46</p></div>
   </div>
   <div class="sb-nav">
     <div class="sb-g">Visão Geral</div>
@@ -1227,6 +1227,16 @@ function gdSync() {
       return Promise.resolve();
     }
   }).then(function() {
+    // Salvar dados no IDB local para persistência
+    var saves = [];
+    if (typeof iSet === 'function' && typeof DB !== 'undefined') {
+      if (DB.ct && DB.ct.length) saves.push(iSet('bases', 'ct', DB.ct));
+      if (DB.col && DB.col.length) saves.push(iSet('bases', 'col', DB.col));
+      if (DB.fest && DB.fest.length) saves.push(iSet('bases', 'fest', DB.fest));
+      if (DB.flx && DB.flx.length) saves.push(iSet('bases', 'flx', DB.flx));
+    }
+    return Promise.all(saves);
+  }).then(function() {
     if (typeof popAll === 'function') popAll();
     if (typeof renderHome === 'function') renderHome();
     // Restaurar Client ID
@@ -1349,18 +1359,26 @@ function gdLoadConfig() {
       GD.TOKEN = saved.token;
       GD.TOKEN_TS = saved.ts;
       gdSetStatus('syncing', 'Reconectando...');
-      gdSyncFromDrive().then(function() {
-        gdHideLogin();
-        gdSetStatus('ok', '☁️ Drive reconectado');
-        if (typeof popAll === 'function') popAll();
-        if (typeof renderHome === 'function') renderHome();
-        gdStartAutoSave();
-      }).catch(function() {
-        GD.TOKEN = null;
-        localStorage.removeItem('bnq_gdtoken');
-        gdSetStatus('off', 'Sessão expirada — faça login');
-        gdShowLogin();
-      });
+      var doReconnect = function() {
+        gdSyncFromDrive().then(function() {
+          gdHideLogin();
+          gdSetStatus('ok', '☁️ Drive reconectado');
+          if (typeof popAll === 'function') popAll();
+          if (typeof renderHome === 'function') renderHome();
+          gdStartAutoSave();
+        }).catch(function() {
+          GD.TOKEN = null;
+          localStorage.removeItem('bnq_gdtoken');
+          gdSetStatus('off', 'Sessão expirada — faça login');
+          gdShowLogin();
+        });
+      };
+      if (window._bnqReady) {
+        doReconnect();
+      } else {
+        window.addEventListener('bnq:ready', doReconnect, { once: true });
+        setTimeout(doReconnect, 4000);
+      }
     } else {
       gdShowLogin();
       if (!cfg || !cfg.CLIENT_ID) {
