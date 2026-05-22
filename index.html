@@ -195,7 +195,7 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
 <nav class="sb">
   <div class="sb-brand">
     <img id="sbLogo" src="https://tess-cdn.pareto.io/assets/uploads/05514a92-5295-40f3-a3c9-ab53a29a8da0.png" alt="Logo">
-    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v4.2 - 22/05 19:12</p></div>
+    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v4.4 - 22/05 19:22</p></div>
   </div>
   <div class="sb-nav">
     <div class="sb-g">Visão Geral</div>
@@ -1185,6 +1185,10 @@ function gdSyncToDrive(overrideData) {
   data.flags = GD.flags;
   data.version = 3;
   data.updatedAt = new Date().toISOString();
+  if (data.ct.length === 0 && data.col.length === 0 && data.fest.length === 0 && data.flx.length === 0) {
+    console.warn('[GD] AVISO: Tentando salvar dados VAZIOS no Drive! Stack:', new Error().stack.split('\n').slice(1,4).join(' | '));
+    return Promise.resolve(); // BLOQUEAR salvamento de dados vazios
+  }
   console.log('[GD] Salvando no Drive - ct:', data.ct.length, 'col:', data.col.length, 
     'fest:', data.fest.length, 'flx:', data.flx.length);
   return gdWriteData(data).then(function(r) {
@@ -1248,7 +1252,12 @@ var _autoSaveInterval = null;
 function gdStartAutoSave() {
   if (_autoSaveInterval) clearInterval(_autoSaveInterval);
   _autoSaveInterval = setInterval(function() {
-    if (GD.TOKEN && GD.DATA_FILE_ID) gdSyncToDrive();
+    if (GD.TOKEN && GD.DATA_FILE_ID) {
+      var hasData = typeof DB !== 'undefined' && 
+        ((DB.ct && DB.ct.length > 0) || (DB.col && DB.col.length > 0) || 
+         (DB.fest && DB.fest.length > 0) || (DB.flx && DB.flx.length > 0));
+      if (hasData) gdSyncToDrive();
+    }
   }, 10 * 60 * 1000);
 }
 function gdToggle(nome) {
