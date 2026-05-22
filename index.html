@@ -195,7 +195,7 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
 <nav class="sb">
   <div class="sb-brand">
     <img id="sbLogo" src="https://tess-cdn.pareto.io/assets/uploads/05514a92-5295-40f3-a3c9-ab53a29a8da0.png" alt="Logo">
-    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v4.6 - 22/05 19:52</p></div>
+    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v4.7 - 22/05 19:55</p></div>
   </div>
   <div class="sb-nav">
     <div class="sb-g">Visão Geral</div>
@@ -1120,7 +1120,7 @@ function mergeFlags(local, remote) {
 function gdSyncFromDrive() {
   console.log('[GD] Iniciando sync do Drive... TOKEN:', GD.TOKEN ? GD.TOKEN.substring(0,20)+'...' : 'NULO');
   if (!GD.TOKEN) {
-    console.error('[GD] Sem token! Nao e possivel sincronizar.');
+    console.error('[GD] Sem token!');
     return Promise.reject(new Error('Sem token de autenticacao'));
   }
   return gdFindOrCreate().then(function() {
@@ -1135,38 +1135,66 @@ function gdSyncFromDrive() {
       flags: remote.flags ? Object.keys(remote.flags).length : 0
     }) : 'NULO');
     if (!remote) { GD.ready = true; return; }
+    
+    // Merge flags
     GD.flags = mergeFlags(GD.flags, remote.flags || {});
     try { localStorage.setItem('bnq_gdflags', JSON.stringify(GD.flags)); } catch(e) {}
-    if (typeof DB !== 'undefined') {
+    
+    var hasRemoteData = (remote.ct && remote.ct.length > 0) ||
+                        (remote.col && remote.col.length > 0) ||
+                        (remote.fest && remote.fest.length > 0) ||
+                        (remote.flx && remote.flx.length > 0);
+    
+    if (!hasRemoteData) { GD.ready = true; return; }
+    
+    // Salvar dados no IndexedDB para que carregarTudo possa carregar
+    var saves = [];
+    if (typeof iSet === 'function') {
+      if (remote.ct && remote.ct.length) {
+        DB.ct = remote.ct;
+        saves.push(iSet('bases', 'ct', remote.ct));
+        saves.push(iSet('meta', 'ct', {count: remote.ct.length, lastDate: '', importedAt: new Date().toLocaleString('pt-BR')}));
+      }
+      if (remote.col && remote.col.length) {
+        DB.col = remote.col;
+        saves.push(iSet('bases', 'col', remote.col));
+        saves.push(iSet('meta', 'col', {count: remote.col.length, lastDate: '', importedAt: new Date().toLocaleString('pt-BR')}));
+      }
+      if (remote.fest && remote.fest.length) {
+        DB.fest = remote.fest;
+        saves.push(iSet('bases', 'fest', remote.fest));
+        saves.push(iSet('meta', 'fest', {count: remote.fest.length, lastDate: '', importedAt: new Date().toLocaleString('pt-BR')}));
+      }
+      if (remote.flx && remote.flx.length) {
+        DB.flx = remote.flx;
+        saves.push(iSet('bases', 'flx', remote.flx));
+        saves.push(iSet('meta', 'flx', {count: remote.flx.length, lastDate: '', importedAt: new Date().toLocaleString('pt-BR')}));
+      }
+      return Promise.all(saves).then(function() {
+        console.log('[GD] Dados salvos no IDB! Atualizando UI...');
+        // Atualizar UI
+        if (typeof updateImpUI === 'function') {
+          if (remote.ct && remote.ct.length) updateImpUI('ct');
+          if (remote.col && remote.col.length) updateImpUI('col');
+          if (remote.fest && remote.fest.length) updateImpUI('fest');
+          if (remote.flx && remote.flx.length) updateImpUI('flx');
+        }
+        if (typeof popAll === 'function') { popAll(); console.log('[GD] popAll OK'); }
+        if (typeof renderHome === 'function') { renderHome(); console.log('[GD] renderHome OK'); }
+        GD.ready = true;
+        console.log('[GD] Sync concluido com sucesso!');
+      });
+    } else {
+      // iSet nao disponivel - tentar direto no DB
+      console.warn('[GD] iSet nao disponivel, usando DB direto');
       if (remote.ct && remote.ct.length) { DB.ct = remote.ct; if(typeof updateImpUI==='function') updateImpUI('ct'); }
       if (remote.col && remote.col.length) { DB.col = remote.col; if(typeof updateImpUI==='function') updateImpUI('col'); }
       if (remote.fest && remote.fest.length) { DB.fest = remote.fest; if(typeof updateImpUI==='function') updateImpUI('fest'); }
       if (remote.flx && remote.flx.length) { DB.flx = remote.flx; if(typeof updateImpUI==='function') updateImpUI('flx'); }
       if (typeof popAll === 'function') popAll();
       if (typeof renderHome === 'function') renderHome();
-      console.log('[GD] DB atualizado e tela renderizada!');
-    } else {
-      console.error('[GD] DB nao disponivel! Aguardando...');
-      // Aguardar DB ficar disponível
-      var waitForDB = function(attempts) {
-        if (typeof DB !== 'undefined') {
-          console.log('[GD] DB disponivel agora! Aplicando dados...');
-          if (remote.ct && remote.ct.length) { DB.ct = remote.ct; if(typeof updateImpUI==='function') updateImpUI('ct'); }
-          if (remote.col && remote.col.length) { DB.col = remote.col; if(typeof updateImpUI==='function') updateImpUI('col'); }
-          if (remote.fest && remote.fest.length) { DB.fest = remote.fest; if(typeof updateImpUI==='function') updateImpUI('fest'); }
-          if (remote.flx && remote.flx.length) { DB.flx = remote.flx; if(typeof updateImpUI==='function') updateImpUI('flx'); }
-          if (typeof popAll === 'function') popAll();
-          if (typeof renderHome === 'function') renderHome();
-          console.log('[GD] Dados aplicados apos espera!');
-        } else if (attempts > 0) {
-          setTimeout(function() { waitForDB(attempts - 1); }, 500);
-        } else {
-          console.error('[GD] DB nunca ficou disponivel');
-        }
-      };
-      waitForDB(10); // tentar por até 5 segundos
+      GD.ready = true;
     }
-    GD.ready = true;
   }).catch(function(err) {
     console.error('[GD] Erro no sync:', err.message || err);
     throw err;
