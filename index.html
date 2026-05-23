@@ -195,7 +195,7 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
 <nav class="sb">
   <div class="sb-brand">
     <img id="sbLogo" src="https://tess-cdn.pareto.io/assets/uploads/05514a92-5295-40f3-a3c9-ab53a29a8da0.png" alt="Logo">
-    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v4.9 - 22/05 20:30</p></div>
+    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v5.1 - 23/05 14:38</p></div>
   </div>
   <div class="sb-nav">
     <div class="sb-g">Visão Geral</div>
@@ -1438,10 +1438,10 @@ const MK=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez
 const DAYS={jan:31,fev:29,mar:31,abr:30,mai:31,jun:30,jul:31,ago:31,set:30,out:31,nov:30,dez:31};
 const CLRS=['#2563eb','#16a34a','#d97706','#dc2626','#7c3aed','#0284c7','#db2777','#059669','#9333ea','#ea580c','#0891b2','#65a30d'];
 // IndexedDB
-const iOpen=()=>new Promise((res,rej)=>{const r=indexedDB.open('BnQ_Hub_v3', 3);r.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains('bases'))db.createObjectStore('bases');if(!db.objectStoreNames.contains('meta'))db.createObjectStore('meta');};r.onsuccess=e=>res(e.target.result);r.onerror=e=>rej(e.target.error);});
-const iSet=async(s,k,v)=>{const db=await iOpen();const tx=db.transaction(s,'readwrite');tx.objectStore(s).put(v,k);return new Promise((r,j)=>{tx.oncomplete=r;tx.onerror=()=>j(tx.error);});};
-const iGet=async(s,k)=>{const db=await iOpen();const tx=db.transaction(s,'readonly');const req=tx.objectStore(s).get(k);return new Promise((r,j)=>{req.onsuccess=()=>r(req.result||null);req.onerror=()=>j(req.error);});};
-const iDel=async(s,k)=>{const db=await iOpen();const tx=db.transaction(s,'readwrite');tx.objectStore(s).delete(k);return new Promise((r,j)=>{tx.oncomplete=r;tx.onerror=()=>j(tx.error);});};
+function iOpen(){return new Promise((res,rej)=>{const r=indexedDB.open('BnQ_Hub_v3', 3);r.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains('bases'))db.createObjectStore('bases');if(!db.objectStoreNames.contains('meta'))db.createObjectStore('meta');};r.onsuccess=e=>res(e.target.result);r.onerror=e=>rej(e.target.error);});}
+async function iSet(s,k,v){const db=await iOpen();const tx=db.transaction(s,'readwrite');tx.objectStore(s).put(v,k);return new Promise((r,j)=>{tx.oncomplete=r;tx.onerror=()=>j(tx.error);});}
+async function iGet(s,k){const db=await iOpen();const tx=db.transaction(s,'readonly');const req=tx.objectStore(s).get(k);return new Promise((r,j)=>{req.onsuccess=()=>r(req.result||null);req.onerror=()=>j(req.error);});}
+async function iDel(s,k){const db=await iOpen();const tx=db.transaction(s,'readwrite');tx.objectStore(s).delete(k);return new Promise((r,j)=>{tx.oncomplete=r;tx.onerror=()=>j(tx.error);});}
 // Utils
 function cl(v){if(!v&&v!==0)return 0;const n=parseFloat(v.toString().replace(',','.'));return isNaN(n)?0:n;}
 function fmt(v){return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
@@ -1665,7 +1665,14 @@ function filFlx(ano,mesArr=[],fluxoTipo=''){ return DB.flx.filter(r=>{
 }
 
 function popAll(){
+  console.log('[popAll] DB.ct:', DB.ct ? DB.ct.length : 'undefined',
+    'DB.col:', DB.col ? DB.col.length : 'undefined',
+    'DB.fest:', DB.fest ? DB.fest.length : 'undefined',
+    'DB.flx:', DB.flx ? DB.flx.length : 'undefined');
   const aC=anosOf(DB.ct),aCol=anosOf(DB.col),aFe=anosOf(DB.fest),aFlx=anosOf(DB.flx);
+  console.log('[popAll] anos CT:', aC, 'COL:', aCol, 'FEST:', aFe, 'FLX:', aFlx);
+  const ctAnoEl = document.getElementById('ctAno');
+  console.log('[popAll] ctAno element:', ctAnoEl ? 'encontrado' : 'NAO ENCONTRADO');
   const aAll=[...new Set([...aC,...aCol,...aFe,...aFlx])].sort((a,b)=>parseInt(b)-parseInt(a));
   popSel('homeAno',[{v:'',t:'Todos os Anos'},...aAll.map(a=>({v:a,t:a}))]);
   const ma=String(new Date().getMonth()+1);
