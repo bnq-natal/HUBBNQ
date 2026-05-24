@@ -586,6 +586,21 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
 
   <!-- FLUXO DE CAIXA -->
   <div class="pg" id="pg-flx">
+    <div id="flxLock" style="position:absolute;inset:0;background:rgba(255,255,255,0.97);z-index:100;display:flex;align-items:center;justify-content:center;border-radius:8px">
+      <div style="text-align:center;padding:32px;background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.12);max-width:320px;width:100%">
+        <div style="font-size:32px;margin-bottom:8px">🔒</div>
+        <div style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:4px">Fluxo de Caixa</div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:20px">Acesso restrito — insira a senha</div>
+        <input id="flxPwdInput" type="password" placeholder="Senha" autocomplete="off"
+          style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:15px;outline:none;margin-bottom:12px;box-sizing:border-box"
+          onkeydown="if(event.key==='Enter')window.flxUnlock()">
+        <button onclick="window.flxUnlock()"
+          style="width:100%;padding:10px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer">
+          🔓 Entrar
+        </button>
+        <div id="flxPwdErr" style="color:#dc2626;font-size:12px;margin-top:8px;display:none">Senha incorreta</div>
+      </div>
+    </div>
     <div class="ph">
       <div><h2>💰 Fluxo de Caixa</h2><p>Vendas, financeiro, comparativos e inteligência</p></div>
       <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
@@ -886,7 +901,31 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
             <button class="btn b-p b-sm" onclick="gdUploadAll()" title="Envia as bases importadas + flags para o Drive">⬆️ Subir Bases</button>
             <button class="btn b-ok b-sm" onclick="gdDownloadAll()" title="Baixa bases + flags do Drive para este PC">⬇️ Baixar Bases</button>
           </div>
-          <div id="gdBasesStatus" style="font-size:11px;color:#16a34a;margin-top:6px;padding:4px 6px;background:#f0fdf4;border-radius:4px;display:none"></div>
+          
+          <div class="card" style="margin-top:16px">
+            <div class="ct">🔐 Segurança — Senha do Fluxo de Caixa</div>
+            <p style="font-size:12px;color:#64748b;margin-bottom:12px">
+              Define a senha necessária para acessar a aba <b>Fluxo de Caixa</b>.
+              A senha é armazenada localmente (apenas neste dispositivo) como hash — nunca em texto.
+            </p>
+            <div class="fl" style="align-items:flex-end;gap:10px;flex-wrap:wrap">
+              <div class="fg">
+                <label>Nova senha</label>
+                <input id="flxCfgPwd1" type="password" placeholder="Mínimo 3 caracteres" autocomplete="new-password"
+                  style="min-width:200px">
+              </div>
+              <div class="fg">
+                <label>Confirmar senha</label>
+                <input id="flxCfgPwd2" type="password" placeholder="Repita a senha" autocomplete="new-password"
+                  style="min-width:200px">
+              </div>
+              <button class="btn b-p b-sm" onclick="window.flxSaveCfgPassword()">💾 Salvar Senha</button>
+              <button class="btn b-sm" onclick="window.flxClearPassword()" style="background:#f1f5f9;color:#475569">🗑️ Remover Senha</button>
+            </div>
+            <div id="flxPwdCfgStatus" style="font-size:12px;margin-top:8px"></div>
+          </div>
+
+<div id="gdBasesStatus" style="font-size:11px;color:#16a34a;margin-top:6px;padding:4px 6px;background:#f0fdf4;border-radius:4px;display:none"></div>
           <div class="ic-st" style="margin-top:8px">
             <div class="s-d" id="gdDot" style="background:#9ca3af"></div>
             <div class="ic-in" id="gdTxt2">Não configurado</div>
@@ -1899,12 +1938,24 @@ function renderCol(){
 
 function renderFlx(){
   const ano=document.getElementById('flxAno')?.value;if(!ano)return;
-  const ly=String(parseInt(ano)-1);
-  const mesSel=getMesSel('flxMesFlags');
+  const mesV=document.getElementById('flxMes')?.value||'0';
+  const ma=new Date().getMonth()+1;
+  // Resolve range de meses do select principal
+  let mesRange=[];
+  if(mesV==='0'||mesV===''){mesRange=[];}
+  else if(mesV==='acc'){mesRange=Array.from({length:ma},(_,i)=>i+1);}
+  else{const m=parseInt(mesV);if(!isNaN(m))mesRange=[m];}
+  // Combina com checkboxes: se select=Todos, usa checkboxes; caso contrário, usa select
+  const mesFlagSel=getMesSel('flxMesFlags');
+  const mesSel=mesRange.length>0?mesRange:(mesFlagSel.length>0?mesFlagSel:[]);
+  // ly só faz sentido se ano específico
+  const ly=ano&&ano!==''?String(parseInt(ano)-1):'';
+  // Filtra dados pelo ano E pelo range de meses
+  const getMN=r=>typeof r.MES_NUM==='number'?r.MES_NUM:parseInt(r.MES_NUM||0);
   const entTodos=filFlx(ano,[],'Entrada');
   const saiTodos=filFlx(ano,[],'Saída');
-  const entV=mesSel.length?entTodos.filter(r=>mesSel.includes(typeof r.MES_NUM==='number'?r.MES_NUM:parseInt(r.MES_NUM||0))):entTodos;
-  const saiV=mesSel.length?saiTodos.filter(r=>mesSel.includes(typeof r.MES_NUM==='number'?r.MES_NUM:parseInt(r.MES_NUM||0))):saiTodos;
+  const entV=mesSel.length?entTodos.filter(r=>mesSel.includes(getMN(r))):entTodos;
+  const saiV=mesSel.length?saiTodos.filter(r=>mesSel.includes(getMN(r))):saiTodos;
   const tE=entV.reduce((s,r)=>s+r.VALOR,0),tS=saiV.reduce((s,r)=>s+r.VALOR,0);
   const saldo=tE-tS,qtd=entV.length,tick=qtd?tE/qtd:0;
   const tipoMap={};entV.forEach(r=>{const t=getTAgr(r.TIPO_RECEITA,flxAgr)||'Outro';tipoMap[t]=(tipoMap[t]||0)+r.VALOR;});
@@ -2116,7 +2167,7 @@ function renderDormTable(r) {
 
 // NAVEGAÇÃO
 const NAV={home:['Home','Visão geral'],v360:['Visão 360°','Perfil completo nas 4 bases'],ct:['⏱️ Contraturno','Pacotes e horas'],col:['🏕️ Colônia','Pacotes e horas'],fest:['🎂 Festinhas','Calendário e gestão'],flx:['💰 Fluxo de Caixa','Vendas, comparativos e análises'],com:['🎯 Intel. Comercial','Cross-produto'],cfg:['⚙️ Config','Importação e sistema']};
-document.querySelectorAll('.sb-i').forEach(item=>{item.addEventListener('click',()=>{const pg=item.dataset.pg;if(!pg)return;document.querySelectorAll('.sb-i').forEach(i=>i.classList.remove('on'));document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));item.classList.add('on');document.getElementById('pg-'+pg)?.classList.add('on');const[t,s]=NAV[pg]||[pg,''];document.getElementById('tbT').textContent=t;document.getElementById('tbS').textContent=s;if(pg==='home')renderHome();if(pg==='ct')renderCT();if(pg==='col')renderCol();if(pg==='fest')renderFest();if(pg==='flx')renderFlx();});});
+document.querySelectorAll('.sb-i').forEach(item=>{item.addEventListener('click',()=>{const pg=item.dataset.pg;if(!pg)return;document.querySelectorAll('.sb-i').forEach(i=>i.classList.remove('on'));document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));item.classList.add('on');document.getElementById('pg-'+pg)?.classList.add('on');const[t,s]=NAV[pg]||[pg,''];document.getElementById('tbT').textContent=t;document.getElementById('tbS').textContent=s;if(pg==='home')renderHome();if(pg==='ct')renderCT();if(pg==='col')renderCol();if(pg==='fest')renderFest();if(pg==='flx'){flxCheckAuth();renderFlx();}});});
 document.querySelectorAll('.it').forEach(tab=>{tab.addEventListener('click',()=>{const ip=tab.dataset.ip;if(!ip)return;const nav=tab.parentElement;nav.querySelectorAll('.it').forEach(t=>t.classList.remove('on'));tab.classList.add('on');let el=nav.nextElementSibling;while(el){if(el.classList&&el.classList.contains('it-c'))el.classList.remove('on');el=el.nextElementSibling;}const target=document.getElementById(ip);if(target)target.classList.add('on');if(ip==='flx-ca')renderComp();if(ip==='flx-intel')renderIntel();});});
 // PARSE — parseFlx garante ANO como STRING, MES_NUM como INT
 // [replaced by final_patch]
@@ -2680,7 +2731,7 @@ function mOpts(t=true) {
 // - Faturamento/Ticket reagem ao mês selecionado
 // - Acumulado Ano no filtro de mês
 function renderFest() {
-  const ano   = document.getElementById('festAno')?.value; if (!ano) return;
+  const ano   = document.getElementById('festAno')?.value;
   const mesV  = document.getElementById('festMes')?.value || '0';
   const hoje  = new Date();
   const mesAtual = hoje.getMonth() + 1;
@@ -3043,6 +3094,94 @@ const gdSetBasesStatus = (state, ts) => {
 
   // ── Expõe funções no window para acesso via onclick no HTML ──
   // (funções dentro de DOMContentLoaded não são acessíveis de onclick diretamente)
+
+// ── Senha de acesso ao Fluxo de Caixa ──────────────────────
+// A senha é definida pelo usuário em ⚙️ Config → nunca fica no código
+// Armazenada em localStorage + IDB (hash SHA-256)
+const _sha256 = async (msg) => {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+};
+const flxUnlock = async () => {
+  const val = (document.getElementById('flxPwdInput')?.value || '').trim();
+  if (!val) return;
+  // Carrega hash salvo pelo usuário
+  let savedHash = null;
+  try { savedHash = localStorage.getItem('bnq_flx_pwd'); } catch(e) {}
+  if (!savedHash) {
+    const cfg = await iGet('meta', 'flxpwd');
+    if (cfg) savedHash = cfg;
+  }
+  if (!savedHash) {
+    const err = document.getElementById('flxPwdErr');
+    if (err) { err.style.display='block'; err.textContent='⚙️ Nenhuma senha configurada. Defina em Config → Segurança.'; }
+    return;
+  }
+  const h = await _sha256(val);
+  if (h === savedHash) {
+    const lock = document.getElementById('flxLock');
+    if (lock) lock.style.display = 'none';
+    sessionStorage.setItem('flxAuth', '1');
+    renderFlx();
+  } else {
+    const err = document.getElementById('flxPwdErr');
+    if (err) { err.style.display='block'; err.textContent='🔒 Senha incorreta'; }
+    const inp = document.getElementById('flxPwdInput');
+    if (inp) { inp.style.borderColor='#dc2626'; inp.value=''; inp.focus(); }
+    setTimeout(() => {
+      const e2=document.getElementById('flxPwdErr'); if(e2) e2.style.display='none';
+      const i2=document.getElementById('flxPwdInput'); if(i2) i2.style.borderColor='#e2e8f0';
+    }, 2500);
+  }
+};
+// Salva nova senha (chamada da página de config)
+const flxSetPassword = async (novaSenha) => {
+  if (!novaSenha || novaSenha.trim().length < 3) {
+    alert('A senha deve ter ao menos 3 caracteres.');
+    return false;
+  }
+  const h = await _sha256(novaSenha.trim());
+  try { localStorage.setItem('bnq_flx_pwd', h); } catch(e) {}
+  await iSet('meta', 'flxpwd', h);
+  sessionStorage.removeItem('flxAuth'); // invalida sessão atual
+  return true;
+};
+// Auto-unlock se já autenticado na sessão atual
+const flxCheckAuth = () => {
+  if (sessionStorage.getItem('flxAuth') === '1') {
+    const lock = document.getElementById('flxLock');
+    if (lock) lock.style.display = 'none';
+  }
+};
+window.flxUnlock     = flxUnlock;
+window.flxSetPassword = flxSetPassword;
+
+
+  // ── Helpers de senha do Fluxo via Config ────────────────
+  const flxSaveCfgPassword = async () => {
+    const p1 = (document.getElementById('flxCfgPwd1')?.value || '').trim();
+    const p2 = (document.getElementById('flxCfgPwd2')?.value || '').trim();
+    const st = document.getElementById('flxPwdCfgStatus');
+    if (!p1) { if(st){st.style.color='#dc2626';st.textContent='Digite uma senha.';} return; }
+    if (p1 !== p2) { if(st){st.style.color='#dc2626';st.textContent='As senhas não coincidem.';} return; }
+    const ok = await flxSetPassword(p1);
+    if (ok) {
+      if(st){st.style.color='#16a34a';st.textContent='✅ Senha salva! Fluxo de Caixa protegido.';}
+      const i1=document.getElementById('flxCfgPwd1');const i2=document.getElementById('flxCfgPwd2');
+      if(i1)i1.value='';if(i2)i2.value='';
+    }
+  };
+  const flxClearPassword = async () => {
+    if (!confirm('Remover a senha do Fluxo de Caixa? O acesso ficará livre.')) return;
+    try { localStorage.removeItem('bnq_flx_pwd'); } catch(e) {}
+    await iDel('meta', 'flxpwd');
+    sessionStorage.removeItem('flxAuth');
+    const st = document.getElementById('flxPwdCfgStatus');
+    if(st){st.style.color='#9ca3af';st.textContent='Senha removida. Fluxo de Caixa sem proteção.';}
+  };
+  window.flxSaveCfgPassword = flxSaveCfgPassword;
+  window.flxClearPassword   = flxClearPassword;
+
   window.gdLogin        = gdLogin;
   window.gdLogout       = gdLogout;
   window.gdConfigure    = gdConfigure;
