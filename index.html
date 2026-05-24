@@ -883,8 +883,10 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
             <button class="btn b-p b-sm" onclick="gdConfigure()">💾 Salvar Client ID</button>
             <button class="btn b-ok b-sm" id="btnGdLogin" onclick="gdLogin()" style="display:none">🔗 Conectar ao Google Drive</button>
             <button class="btn b-err b-sm" id="btnGdLogout" onclick="gdLogout()" style="display:none">⛔ Desconectar</button>
-            <button class="btn b-gh b-sm" onclick="gdLoadFlags()" title="Recarregar flags do Drive">🔄 Sincronizar</button>
+            <button class="btn b-gh b-sm" onclick="gdLoadFlags()" title="Sincronizar flags de resolvido">🔄 Sincronizar flags</button>
+            <button class="btn b-ok b-sm" onclick="gdLoadBases(false)" title="Baixar bases do Drive para este PC">⬇️ Baixar bases</button>
           </div>
+          <div id="gdBasesStatus" style="font-size:11px;color:#16a34a;margin-top:6px;padding:4px 6px;background:#f0fdf4;border-radius:4px;display:none"></div>
           <div class="ic-st" style="margin-top:8px">
             <div class="s-d" id="gdDot" style="background:#9ca3af"></div>
             <div class="ic-in" id="gdTxt2">Não configurado</div>
@@ -1478,6 +1480,11 @@ async function importBase(file, tipo) {
       updateImpUI(tipo);
       popAll();
       renderHome();
+      // Salva no Drive se conectado
+      if (GD.TOKEN) {
+        gdSetBasesStatus('saving');
+        gdSaveBases();
+      }
       alert('✓ ' + data.length + ' registros (' + tipo + '). Anos: ' + anos.join(', '));
     } catch(err) {
       console.error(err);
@@ -2555,12 +2562,19 @@ const gdSave = async () => {
 };
 const gdSyncFlags = async () => {
   try {
+    // 1. Sincroniza flags de resolvido
     await gdFindOrCreate();
     const remote = await gdReadFile();
     GD.flags = Object.assign({}, GD.flags, remote);
     await iSet('meta', 'gdflags', GD.flags);
     GD.ready = true;
     console.log('[GD] Flags sincronizados:', Object.keys(GD.flags).length);
+    // 2. Se IDB local estiver vazio, baixa as bases automaticamente
+    const semDados = DB.ct.length===0 && DB.col.length===0 && DB.fest.length===0 && DB.flx.length===0;
+    if (semDados) {
+      console.log('[GD] IDB vazio — baixando bases do Drive...');
+      await gdLoadBases(true); // forceOverwrite=true (não há dados locais para perder)
+    }
   } catch(err) {
     console.error('[GD] Sync error:', err);
     gdSetStatus('error', 'Erro ao sincronizar');
@@ -2886,6 +2900,118 @@ function renderColGestao() { renderGestao(
 
 
 
+
+
+// ── Google Drive: sincronização das BASES ───────────────────────
+// Salva as 4 bases no Drive para acesso de qualquer PC
+const GD_BASES_FILE = 'bnq_hub_bases.json';
+let GD_BASES_FILE_ID = null;
+
+// Busca ou cria o arquivo de bases no Drive
+const gdFindOrCreateBases = async () => {
+  const q = encodeURIComponent("name='"+GD_BASES_FILE+"' and trashed=false");
+  const r = await fetch(
+    'https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id)&spaces=drive',
+    { headers: { Authorization: 'Bearer '+GD.TOKEN } }
+  );
+  const d = await r.json();
+  if (d.files && d.files.length > 0) { GD_BASES_FILE_ID = d.files[0].id; return; }
+  const bnd = 'bnqbases_bnd';
+  const meta = JSON.stringify({ name: GD_BASES_FILE, mimeType: 'application/json' });
+  const body = '--'+bnd+'\r\nContent-Type: application/json\r\n\r\n'+meta+
+    '\r\n--'+bnd+'\r\nContent-Type: application/json\r\n\r\n{}\r\n--'+bnd+'--';
+  const cr = await fetch(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+    { method:'POST', headers:{ Authorization:'Bearer '+GD.TOKEN, 'Content-Type':'multipart/related; boundary='+bnd }, body }
+  );
+  const created = await cr.json();
+  GD_BASES_FILE_ID = created.id;
+};
+
+// Salva as 4 bases + meta no Drive
+const gdSaveBases = async () => {
+  if (!GD.TOKEN) return;
+  try {
+    if (!GD_BASES_FILE_ID) await gdFindOrCreateBases();
+    const payload = {
+      ct:   DB.ct,   ctMeta:   DB.meta.ct,
+      col:  DB.col,  colMeta:  DB.meta.col,
+      fest: DB.fest, festMeta: DB.meta.fest,
+      flx:  DB.flx,  flxMeta:  DB.meta.flx,
+      savedAt: new Date().toISOString(),
+    };
+    await fetch(
+      'https://www.googleapis.com/upload/drive/v3/files/'+GD_BASES_FILE_ID+'?uploadType=media',
+      {
+        method: 'PATCH',
+        headers: { Authorization: 'Bearer '+GD.TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }
+    );
+    console.log('[GD] Bases salvas no Drive:', Object.keys(payload).join(', '));
+    gdSetBasesStatus('saved');
+  } catch(err) {
+    console.error('[GD] Erro ao salvar bases:', err);
+  }
+};
+
+// Baixa as bases do Drive e popula o DB local
+const gdLoadBases = async (forceOverwrite) => {
+  if (!GD.TOKEN) { alert('Conecte ao Google Drive primeiro.'); return; }
+  gdSetStatus('syncing', 'Baixando bases do Drive...');
+  try {
+    if (!GD_BASES_FILE_ID) await gdFindOrCreateBases();
+    var resp = await fetch(
+      'https://www.googleapis.com/drive/v3/files/' + GD_BASES_FILE_ID + '?alt=media',
+      { headers: { Authorization: 'Bearer ' + GD.TOKEN } }
+    );
+    if (!resp.ok) { gdSetStatus('ok', '☁️ Drive conectado'); return; }
+    var payload = await resp.json();
+    if (!payload || !payload.savedAt) {
+      gdSetStatus('ok', '☁️ Drive conectado — sem bases salvas ainda');
+      return;
+    }
+    var temDados = DB.ct.length > 0 || DB.col.length > 0 || DB.fest.length > 0 || DB.flx.length > 0;
+    if (temDados && !forceOverwrite) {
+      var dtStr = new Date(payload.savedAt).toLocaleString('pt-BR');
+      var msg1 = 'O Drive tem bases salvas em ' + dtStr + '.';
+      var msg2 = 'Deseja SUBSTITUIR os dados locais pelos dados do Drive?';
+      var msg3 = '(Cancele para manter os dados locais)';
+      var ok = confirm(msg1 + '\n\n' + msg2 + '\n\n' + msg3);
+      if (!ok) { gdSetStatus('ok', '☁️ Drive conectado'); return; }
+    }
+    if (payload.ct)   { DB.ct   = payload.ct;   DB.meta.ct   = payload.ctMeta   || {}; }
+    if (payload.col)  { DB.col  = payload.col;  DB.meta.col  = payload.colMeta  || {}; }
+    if (payload.fest) { DB.fest = payload.fest; DB.meta.fest = payload.festMeta || {}; }
+    if (payload.flx)  { DB.flx  = payload.flx;  DB.meta.flx  = payload.flxMeta  || {}; }
+    for (var t of ['ct', 'col', 'fest', 'flx']) {
+      if (DB[t].length > 0) {
+        await iSet('bases', t, DB[t]);
+        await iSet('meta',  t, DB.meta[t]);
+        updateImpUI(t);
+      }
+    }
+    popAll();
+    renderHome();
+    gdSetStatus('ok', '☁️ Drive conectado — bases carregadas');
+    gdSetBasesStatus('loaded', payload.savedAt);
+    alert('✅ Bases carregadas do Drive!\nCT: ' + DB.ct.length + ' | COL: ' + DB.col.length + ' | FEST: ' + DB.fest.length + ' | FLX: ' + DB.flx.length + ' registros');
+  } catch(err) {
+    console.error('[GD] Erro ao carregar bases:', err);
+    gdSetStatus('error', 'Erro ao carregar bases');
+  }
+};
+
+// Atualiza o status visual das bases no card de config
+const gdSetBasesStatus = (state, ts) => {
+  const el = document.getElementById('gdBasesStatus');
+  if (!el) return;
+  el.style.display = 'block';
+  if (state==='saved') el.textContent = '✅ Bases salvas no Drive às '+new Date().toLocaleString('pt-BR');
+  else if (state==='loaded') el.textContent = '✅ Bases carregadas do Drive (salvas em '+new Date(ts).toLocaleString('pt-BR')+')';
+  else if (state==='saving') el.textContent = '⏳ Salvando bases no Drive...';
+  else el.textContent = '';
+};
 
 }); // fim DOMContentLoaded
 </script>
