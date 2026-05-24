@@ -883,8 +883,8 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
             <button class="btn b-p b-sm" onclick="gdConfigure()">💾 Salvar Client ID</button>
             <button class="btn b-ok b-sm" id="btnGdLogin" onclick="gdLogin()" style="display:none">🔗 Conectar ao Google Drive</button>
             <button class="btn b-err b-sm" id="btnGdLogout" onclick="gdLogout()" style="display:none">⛔ Desconectar</button>
-            <button class="btn b-gh b-sm" onclick="gdLoadFlags()" title="Sincronizar flags de resolvido">🔄 Sincronizar flags</button>
-            <button class="btn b-ok b-sm" onclick="gdLoadBases(false)" title="Baixar bases do Drive para este PC">⬇️ Baixar bases</button>
+            <button class="btn b-p b-sm" onclick="gdUploadAll()" title="Envia as bases importadas + flags para o Drive">⬆️ Subir Bases</button>
+            <button class="btn b-ok b-sm" onclick="gdDownloadAll()" title="Baixa bases + flags do Drive para este PC">⬇️ Baixar Bases</button>
           </div>
           <div id="gdBasesStatus" style="font-size:11px;color:#16a34a;margin-top:6px;padding:4px 6px;background:#f0fdf4;border-radius:4px;display:none"></div>
           <div class="ic-st" style="margin-top:8px">
@@ -1230,8 +1230,7 @@ function gdLoadConfig() {
     req.onerror = function() { gdShowLogin(); };
   } catch(e) { gdShowLogin(); }
 }
-</script>
-<script>document.addEventListener('DOMContentLoaded',()=>{
+</scdocument.addEventListener('DOMContentLoaded',()=>{
 Chart.register(ChartDataLabels);
 var DB = window.DB; var CH = window.CH;
 let ctAgr=false,flxAgr=false;
@@ -3014,12 +3013,42 @@ const gdSetBasesStatus = (state, ts) => {
 };
 
 
+
+  // ── Subir Bases: envia bases + flags para o Drive ───────────
+  const gdUploadAll = async () => {
+    if (!GD.TOKEN) { alert('Conecte ao Google Drive primeiro.'); return; }
+    const temDados = DB.ct.length>0||DB.col.length>0||DB.fest.length>0||DB.flx.length>0;
+    if (!temDados) { alert('Importe as bases primeiro antes de subir para o Drive.'); return; }
+    gdSetStatus('syncing', 'Subindo bases para o Drive...');
+    gdSetBasesStatus('saving');
+    try {
+      await gdSaveBases();    // sobe as 4 bases
+      await gdSyncFlags();    // sincroniza flags também
+      gdSetStatus('ok', '☁️ Drive conectado');
+      gdSetBasesStatus('saved');
+      alert('✅ Bases enviadas para o Drive!\nCT: '+DB.ct.length+' | COL: '+DB.col.length+' | FEST: '+DB.fest.length+' | FLX: '+DB.flx.length+' registros');
+    } catch(err) {
+      console.error('[GD] Erro ao subir:', err);
+      gdSetStatus('error', 'Erro ao subir bases');
+      alert('Erro ao enviar bases: ' + err.message);
+    }
+  };
+
+  // ── Baixar Bases: recebe bases + flags do Drive ──────────────
+  const gdDownloadAll = async () => {
+    if (!GD.TOKEN) { alert('Conecte ao Google Drive primeiro.'); return; }
+    await gdSyncFlags();      // sincroniza flags primeiro
+    await gdLoadBases(false); // baixa bases (pergunta se já tiver dados locais)
+  };
+
   // ── Expõe funções no window para acesso via onclick no HTML ──
   // (funções dentro de DOMContentLoaded não são acessíveis de onclick diretamente)
   window.gdLogin        = gdLogin;
   window.gdLogout       = gdLogout;
   window.gdConfigure    = gdConfigure;
   window.gdLoadFlags    = gdLoadFlags;
+  window.gdUploadAll    = gdUploadAll;
+  window.gdDownloadAll  = gdDownloadAll;
   window.gdLoadBases    = gdLoadBases;
   window.gdSaveBases    = gdSaveBases;
   window.gdToggle       = gdToggle;
@@ -3033,5 +3062,6 @@ const gdSetBasesStatus = (state, ts) => {
   window.do360Search    = do360Search;
 
 }); // fim DOMContentLoaded
+ContentLoaded
 </script>
 </body></html>
