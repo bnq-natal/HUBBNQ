@@ -1529,7 +1529,7 @@ function popAll(){
   const m0=mOpts();  // Ano Todo + Acumulado + meses (para festMes)
   const mnt=mNAll(); // mesmo esquema para comparativo fluxo
   // CT — ano principal com "Todos os anos"
-  popSel('ctAno',aOAll(aC),'');popSel('ctG1',aOAll(aC),'');popSel('ctG2',aOAll(aC),'');
+  popSel('ctAno',aOAll(aC),'');popSel('ctMes',mn_,ma);popSel('ctG1',aOAll(aC),'');popSel('ctG2',aOAll(aC),'');
   popSel('ctCRAno',aOAll(aC),'');popSel('ctCRDe',mn_,'1');popSel('ctCRAte',mn_,ma);
   popSel('ctPAAno',aOAll(aC),'');popSel('ctPADe',mn_,'1');popSel('ctPAAte',mn_,ma);
   popSel('ctPBAno',aOAll(aC),'');popSel('ctPBDe',mn_,'1');popSel('ctPBAte',mn_,ma);
@@ -1538,7 +1538,7 @@ function popAll(){
   popSel('ctGPac',[{v:'',t:'Todos'},...pCT.map(p=>({v:p,t:p}))]);
   popSel('ctDPac',[{v:'',t:'Todos'},...pCT.map(p=>({v:p,t:p}))]);
   // COL — ano principal com "Todos os anos"
-  popSel('colAno',aOAll(aCol),'');popSel('colG1',aOAll(aCol),'');popSel('colG2',aOAll(aCol),'');
+  popSel('colAno',aOAll(aCol),'');popSel('colMes',mn_,ma);popSel('colG1',aOAll(aCol),'');popSel('colG2',aOAll(aCol),'');
   popSel('colCRAno',aOAll(aCol),'');popSel('colCRDe',mn_,'1');popSel('colCRAte',mn_,ma);
   popSel('colPAAno',aOAll(aCol),'');popSel('colPADe',mn_,'1');popSel('colPAAte',mn_,ma);
   popSel('colPBAno',aOAll(aCol),'');popSel('colPBDe',mn_,'1');popSel('colPBAte',mn_,ma);
@@ -1549,7 +1549,7 @@ function popAll(){
   popSel('calMes',mn_,ma);popSel('calAno',aOAll(aFe),'');
   popSel('feCRAno',[{v:'todos',t:'Todos os anos'},...aO(aFe)],aFe[0]);popSel('feDAno',aOAll(aFe),'');
   // FLX — ano principal com "Todos os anos"
-  popSel('flxAno',aOAll(aFlx),'');
+  popSel('flxAno',aOAll(aFlx),'');popSel('flxMes',mn_,ma);
   popSel('flxCA1',aON(aFlx),aFlx[0]||'');popSel('flxCA2',aON(aFlx),aFlx[1]||'');popSel('flxCA3',aON(aFlx),aFlx[2]||'');
   popSel('flxCDe',mn_,'1');popSel('flxCAte',mn_,ma);
   popSel('flxCmAno',aOAll(aFlx),'');popSel('flxCmDe',mn_,'1');popSel('flxCmAte',mn_,ma);
@@ -1861,9 +1861,31 @@ function renderGestao(base,ano1,ano2,pacFilt,turFilt,sitFilt,ordFilt,pfx) {
 
 // [renderColGestao replaced by patch_bugs]
 
-function renderCT(){const ano=document.getElementById('ctAno')?.value;if(!ano)return;const mesSel=getMesSel('ctMesFlags');renderPainel(DB.ct,ano,mesSel,ctAgr,'ct');};
+function renderCT(){
+  const ano=document.getElementById('ctAno')?.value;
+  if(!ano)return;
+  // ctMes é o select principal de mês; ctMesFlags são os checkboxes (ambos filtram)
+  const ctMesVal=document.getElementById('ctMes')?.value||'0';
+  let mesSel=[];
+  if(ctMesVal==='0'||ctMesVal===''){mesSel=[];}  // Todos os meses
+  else if(ctMesVal==='acc'){const ma=new Date().getMonth()+1;mesSel=Array.from({length:ma},(_,i)=>i+1);}
+  else{const m=parseInt(ctMesVal);if(!isNaN(m))mesSel=[m];}
+  // Se ctMes está em "Todos", usa os checkboxes como filtro adicional
+  if(mesSel.length===0) mesSel=getMesSel('ctMesFlags');
+  renderPainel(DB.ct,ano,mesSel,ctAgr,'ct');
+};
 
-function renderCol(){const ano=document.getElementById('colAno')?.value;if(!ano)return;const mesSel=getMesSel('colMesFlags');renderPainel(DB.col,ano,mesSel,false,'col');};
+function renderCol(){
+  const ano=document.getElementById('colAno')?.value;
+  if(!ano)return;
+  const colMesVal=document.getElementById('colMes')?.value||'0';
+  let mesSel=[];
+  if(colMesVal==='0'||colMesVal===''){mesSel=[];}
+  else if(colMesVal==='acc'){const ma=new Date().getMonth()+1;mesSel=Array.from({length:ma},(_,i)=>i+1);}
+  else{const m=parseInt(colMesVal);if(!isNaN(m))mesSel=[m];}
+  if(mesSel.length===0) mesSel=getMesSel('colMesFlags');
+  renderPainel(DB.col,ano,mesSel,false,'col');
+};
 
 // [renderCal replaced by patch_bugs]
 
@@ -2130,7 +2152,9 @@ const engDormFlxSomente=(minMes)=>{
 // CT e COL: engines recorrência/período corrigidas com sameAno e showPerCTCOL
 // RENDER CT
 document.getElementById('ctAno')?.addEventListener('change',renderCT);
+  document.getElementById('ctMes')?.addEventListener('change',renderCT);
 document.getElementById('colAno')?.addEventListener('change',renderCol);
+  document.getElementById('colMes')?.addEventListener('change',renderCol);
 document.getElementById('btnCtAgr')?.addEventListener('click',()=>{ctAgr=!ctAgr;const b=document.getElementById('btnCtAgr');b.textContent=ctAgr?'📦 Desagrupar':'📦 Agrupar Pacotes';b.classList.toggle('on',ctAgr);renderCT();});
 document.getElementById('btnCtR')?.addEventListener('click',()=>{const r=engRec(DB.ct,document.getElementById('ctCRAno').value,parseDe(document.getElementById('ctCRDe').value),parseAte(document.getElementById('ctCRAte').value),parseInt(document.getElementById('ctCRMin').value),parseInt(document.getElementById('ctCRChurn').value),document.getElementById('ctCRTur').value);showRec('ctCRK','ctCRTb',r,document.getElementById('ctCRAno').value);});
 document.getElementById('btnCtP')?.addEventListener('click',()=>{const r=engPerComSaldo(DB.ct,parseDe(document.getElementById('ctPADe').value),parseAte(document.getElementById('ctPAAte').value),document.getElementById('ctPAAno').value,parseDe(document.getElementById('ctPBDe').value),parseAte(document.getElementById('ctPBAte').value),document.getElementById('ctPBAno').value);showPerCTCOL('ctCPK','ctCPTb',r,document.getElementById('ctPAAno').value,document.getElementById('ctPBAno').value);});
@@ -2146,6 +2170,7 @@ document.getElementById('festMes')?.addEventListener('change',renderFest);
 // FLUXO DE CAIXA — CORRIGIDO
 // [renderFlx replaced by mega_patch]
 document.getElementById('flxAno')?.addEventListener('change',renderFlx);
+  document.getElementById('flxMes')?.addEventListener('change',renderFlx);
 document.getElementById('btnFlxAgr')?.addEventListener('click',()=>{flxAgr=!flxAgr;const b=document.getElementById('btnFlxAgr');b.textContent=flxAgr?'📦 Desagrupar':'📦 Agrupar Pacotes';b.classList.toggle('on',flxAgr);renderFlx();});
 
 // COMPARATIVO ANUAL — CORRIGIDO
