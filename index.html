@@ -194,7 +194,7 @@ table.dt td.r{text-align:right;font-variant-numeric:tabular-nums} table.dt td.c{
 <nav class="sb">
   <div class="sb-brand">
     <img id="sbLogo" src="https://tess-cdn.pareto.io/assets/uploads/05514a92-5295-40f3-a3c9-ab53a29a8da0.png" alt="Logo">
-    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v5.3 - 23/05 15:30</p></div>
+    <div><h1>Brincar no Quintal</h1><p>Central de Gestão — v5.6 - 24/05 14:32</p></div>
   </div>
   <div class="sb-nav">
     <div class="sb-g">Visão Geral</div>
@@ -1071,16 +1071,16 @@ function gdSyncFromDrive() {
     GD.ready = true;
   });
 }
-function gdSyncToDrive(overrideData) {
-  try { localStorage.setItem('bnq_gdflags', JSON.stringify(GD.flags)); } catch(e) {}
+function gdSyncToDrive() {
   if (!GD.TOKEN || !GD.DATA_FILE_ID) return Promise.resolve();
-  var data = overrideData || {ct:DB.ct||[],col:DB.col||[],fest:DB.fest||[],flx:DB.flx||[]};
-  if (!data.ct.length && !data.col.length && !data.fest.length && !data.flx.length) {
-    console.warn('[GD] Bloqueado: dados vazios'); return Promise.resolve();
-  }
-  data.flags = GD.flags; data.version = 3; data.updatedAt = new Date().toISOString();
-  console.log('[GD] Salvando - ct:', data.ct.length, 'col:', data.col.length);
-  return gdWriteData(data).then(function(r) { console.log('[GD] Drive salvo!'); return r; });
+  var data = {
+    ct: typeof DB !== 'undefined' ? DB.ct : [],
+    col: typeof DB !== 'undefined' ? DB.col : [],
+    fest: typeof DB !== 'undefined' ? DB.fest : [],
+    flx: typeof DB !== 'undefined' ? DB.flx : [],
+    flags: GD.flags, version: 3, updatedAt: new Date().toISOString()
+  };
+  return gdWriteData(data);
 }
 function gdSync() {
   if (!GD.TOKEN) { gdShowLogin(); return Promise.resolve(); }
@@ -1173,6 +1173,42 @@ function gdConfigure() {
   });
 }
 function gdLoadFlags() { return gdSync(); }
+function gdHandleRedirect() {
+  var hash = window.location.hash;
+  if (!hash || !hash.includes('access_token')) return false;
+  var params = {};
+  hash.substring(1).split('&').forEach(function(p) {
+    var kv = p.split('=');
+    params[kv[0]] = decodeURIComponent((kv[1] || '').replace(/\+/g, ' '));
+  });
+  if (!params.access_token) return false;
+  history.replaceState(null, '', window.location.pathname);
+  GD.TOKEN = params.access_token;
+  GD.TOKEN_TS = Date.now();
+  try { localStorage.setItem('bnq_gdtoken', JSON.stringify({ token: GD.TOKEN, ts: GD.TOKEN_TS })); } catch(e) {}
+  try {
+    var cid = localStorage.getItem('bnq_client_id');
+    if (cid) { GD.CLIENT_ID = cid; }
+    var flags = localStorage.getItem('bnq_gdflags');
+    if (flags) { try { GD.flags = JSON.parse(flags); } catch(e) {} }
+  } catch(e) {}
+  gdSetMsg('Conectado! Carregando dados...');
+  var doSync = function() {
+    gdSyncFromDrive().then(function() {
+      gdHideLogin();
+      gdSetStatus('ok', '☁️ Drive conectado');
+      gdStartAutoSave();
+    }).catch(function(err) {
+      gdHideLogin();
+      gdSetStatus('ok', '☁️ Conectado (sem dados previos)');
+      gdStartAutoSave();
+    });
+  };
+  if (window._bnqReady) { doSync(); }
+  else { window.addEventListener('bnq:ready', doSync, {once:true}); setTimeout(doSync, 3000); }
+  return true;
+}
+
 function gdLoadConfig() {
   try {
     var req = indexedDB.open('BnQ_Hub_v3', 3);
@@ -1287,34 +1323,6 @@ function scY(cb){return {scales:{y:{beginAtZero:true,ticks:{callback:cb||(v=>v)}
 function popSel(id,opts,def=null){const sel=document.getElementById(id);if(!sel)return;const cur=sel.value;sel.innerHTML='';opts.forEach(o=>{const el=document.createElement('option');el.value=typeof o==='object'?o.v:o;el.textContent=typeof o==='object'?o.t:o;sel.appendChild(el);});sel.value=def||(Array.from(sel.options).some(o=>o.value===cur)?cur:(sel.options[0]?.value||''));};
 // [mOpts replaced by patch_bugs]
 function mN(){return MESES.map((m,i)=>({v:String(i+1),t:m}));}
-// mNAll: Todos os meses + Acumulado + 12 meses (para selects De/Até)
-function mNAll(){
-  const mesAtual=new Date().getMonth()+1;
-  return [
-    {v:'0',t:'Todos os meses'},
-    {v:'acc',t:'Acumulado (Jan→'+MESES[mesAtual-1]+')'},
-    ...MESES.map((m,i)=>({v:String(i+1),t:m}))
-  ];
-}
-// aOAll: Todos os anos + lista de anos (para selects principais de ano)
-function aOAll(arr){
-  return [{v:'',t:'Todos os anos'},...arr.map(a=>({v:String(a),t:String(a)}))];
-}
-
-// Helper: lê valor de select de mês e resolve para [de, ate]
-// '0' = Todos (1-12), 'acc' = Acumulado (1-mesAtual), '3' = só março (3-3)
-function parseMesRange(val) {
-  const ma = new Date().getMonth() + 1;
-  if (!val || val === '0') return [1, 12];
-  if (val === 'acc') return [1, ma];
-  const m = parseInt(val);
-  return isNaN(m) ? [1, 12] : [m, m];
-}
-// Helper: lê valor de select De e Até separados
-function parseDe(val)  { if (!val||val==='0'||val==='acc') return 1; return parseInt(val)||1; }
-function parseAte(val) { if (!val||val==='0') return 12; if (val==='acc') return new Date().getMonth()+1; return parseInt(val)||12; }
-// Helper: lê ano do select (''=>todos os anos, ou string do ano)
-function parseAno(val) { return (!val||val==='') ? null : String(val); }
 function aO(arr){return arr.map(a=>({v:String(a),t:String(a)}));}
 function aON(arr){return [{v:'',t:'Nenhum'},...arr.map(a=>({v:String(a),t:String(a)}))];}
 
@@ -1422,17 +1430,12 @@ function parseCTCol(wb) {
   var hdr = rawRows[0].map(function(h) { return String(h||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim(); });
   var fi = function(fn) { return hdr.findIndex(fn); };
   var idx = {
-    DATA: fi(function(h){return h==='data';}),
-    MES: fi(function(h){return h==='mes'||h.includes('mes');}),
-    ANO: fi(function(h){return h==='ano';}),
-    CODCRI: fi(function(h){return h==='codcri'||h==='cod_cri'||h==='codigo';}),
+    DATA: fi(function(h){return h==='data';}), MES: fi(function(h){return h==='mes'||h.includes('mes');}),
+    ANO: fi(function(h){return h==='ano';}), CODCRI: fi(function(h){return h==='codcri'||h==='cod_cri'||h==='codigo';}),
     NOME: fi(function(h){return h.includes('crianca')||h.includes('nome')||h==='aluno';}),
-    TIPO: fi(function(h){return h.includes('tipo');}),
-    PACOTE: fi(function(h){return h.includes('pacote');}),
-    QTDE: fi(function(h){return h==='qtde'||h.includes('hora');}),
-    VALOR: fi(function(h){return h==='valor';}),
-    TURNO: fi(function(h){return h.includes('turno');}),
-    SALDO: fi(function(h){return h==='saldo';})
+    TIPO: fi(function(h){return h.includes('tipo');}), PACOTE: fi(function(h){return h.includes('pacote');}),
+    QTDE: fi(function(h){return h==='qtde'||h.includes('hora');}), VALOR: fi(function(h){return h==='valor';}),
+    TURNO: fi(function(h){return h.includes('turno');}), SALDO: fi(function(h){return h==='saldo';})
   };
   if (idx.NOME < 0 || idx.ANO < 0) throw new Error('Colunas obrigatorias nao encontradas: ' + hdr.slice(0,10).join('|'));
   function nT(v){var s=(v||'').toString().toLowerCase().trim();if(s.startsWith('realiz'))return 'Realizado';if(s.startsWith('contrat'))return 'Contratado';return '';}
@@ -1448,8 +1451,7 @@ function parseCTCol(wb) {
     var codcri=idx.CODCRI>=0?String(row[idx.CODCRI]||'').trim():'';
     return{DATA:ds,MES:mes,ANO:ano,NOME:nome,CODCRI:codcri,
       TIPO:nT(row[idx.TIPO]),PACOTE:(row[idx.PACOTE]||'').toString().trim(),
-      QTDE:cl(row[idx.QTDE]),VALOR:cl(row[idx.VALOR]),
-      TURNO:nTur(row[idx.TURNO]),SALDO:cl(row[idx.SALDO])};
+      QTDE:cl(row[idx.QTDE]),VALOR:cl(row[idx.VALOR]),TURNO:nTur(row[idx.TURNO]),SALDO:cl(row[idx.SALDO])};
   }).filter(function(r){return r.ANO&&r.NOME&&!isNaN(parseInt(r.ANO))&&!/^20\d{2}/.test(r.NOME.trim());});
 }
 
@@ -1509,58 +1511,55 @@ async function carregarTudo() {
   window.dispatchEvent(new Event('bnq:ready'));
 };
 
-function sameAno(rAno,filtroAno){ if(!filtroAno||String(filtroAno).trim()==='')return true; return String(rAno).trim()===String(filtroAno).trim(); }
+function sameAno(rAno,filtroAno){ return String(rAno).trim()===String(filtroAno).trim(); }
 
 function filFlx(ano,mesArr=[],fluxoTipo=''){ return DB.flx.filter(r=>{
   if(ano&&!sameAno(r.ANO,ano))return false;
   if(fluxoTipo&&r.FLUXO!==fluxoTipo)return false;
   if(mesArr.length>0&&!mesArr.includes(typeof r.MES_NUM==='number'?r.MES_NUM:parseInt(r.MES_NUM||0)))return false;
   return true;
-});
- }
+}); }
 
 function popAll(){
   const aC=anosOf(DB.ct),aCol=anosOf(DB.col),aFe=anosOf(DB.fest),aFlx=anosOf(DB.flx);
   const aAll=[...new Set([...aC,...aCol,...aFe,...aFlx])].sort((a,b)=>parseInt(b)-parseInt(a));
   const ma=String(new Date().getMonth()+1);
-  const mn_=mNAll(); // Todos os meses + Acumulado + 12 meses
-  const m0=mOpts();  // Ano Todo + Acumulado + meses (para festMes)
-  const mnt=mNAll(); // mesmo esquema para comparativo fluxo
-  // CT — ano principal com "Todos os anos"
-  popSel('ctAno',aOAll(aC),'');popSel('ctG1',aOAll(aC),'');popSel('ctG2',aOAll(aC),'');
-  popSel('ctCRAno',aOAll(aC),'');popSel('ctCRDe',mn_,'1');popSel('ctCRAte',mn_,ma);
-  popSel('ctPAAno',aOAll(aC),'');popSel('ctPADe',mn_,'1');popSel('ctPAAte',mn_,ma);
-  popSel('ctPBAno',aOAll(aC),'');popSel('ctPBDe',mn_,'1');popSel('ctPBAte',mn_,ma);
-  popSel('ctDAno',aOAll(aC),'');popSel('ctSAAno',aOAll(aC),'');
+  const mn_=mN(),m0=mOpts(),mnt=mOpts(false);
+  // CT
+  popSel('ctAno',aO(aC),aC[0]);popSel('ctG1',aO(aC),aC[0]);popSel('ctG2',aO(aC),aC[1]||aC[0]);
+  popSel('ctCRAno',aO(aC),aC[0]);popSel('ctCRDe',mn_,'1');popSel('ctCRAte',mn_,ma);
+  popSel('ctPAAno',aO(aC),aC[1]||aC[0]);popSel('ctPADe',mn_,'1');popSel('ctPAAte',mn_,ma);
+  popSel('ctPBAno',aO(aC),aC[0]);popSel('ctPBDe',mn_,'1');popSel('ctPBAte',mn_,ma);
+  popSel('ctDAno',aO(aC),aC[0]);popSel('ctSAAno',aO(aC),aC[0]);
   const pCT=[...new Set(DB.ct.map(r=>r.PACOTE).filter(Boolean))].sort();
   popSel('ctGPac',[{v:'',t:'Todos'},...pCT.map(p=>({v:p,t:p}))]);
   popSel('ctDPac',[{v:'',t:'Todos'},...pCT.map(p=>({v:p,t:p}))]);
-  // COL — ano principal com "Todos os anos"
-  popSel('colAno',aOAll(aCol),'');popSel('colG1',aOAll(aCol),'');popSel('colG2',aOAll(aCol),'');
-  popSel('colCRAno',aOAll(aCol),'');popSel('colCRDe',mn_,'1');popSel('colCRAte',mn_,ma);
-  popSel('colPAAno',aOAll(aCol),'');popSel('colPADe',mn_,'1');popSel('colPAAte',mn_,ma);
-  popSel('colPBAno',aOAll(aCol),'');popSel('colPBDe',mn_,'1');popSel('colPBAte',mn_,ma);
+  // COL
+  popSel('colAno',aO(aCol),aCol[0]);popSel('colG1',aO(aCol),aCol[0]);popSel('colG2',aO(aCol),aCol[1]||aCol[0]);
+  popSel('colCRAno',aO(aCol),aCol[0]);popSel('colCRDe',mn_,'1');popSel('colCRAte',mn_,ma);
+  popSel('colPAAno',aO(aCol),aCol[1]||aCol[0]);popSel('colPADe',mn_,'1');popSel('colPAAte',mn_,ma);
+  popSel('colPBAno',aO(aCol),aCol[0]);popSel('colPBDe',mn_,'1');popSel('colPBAte',mn_,ma);
   const pCol=[...new Set(DB.col.map(r=>r.PACOTE).filter(Boolean))].sort();
   popSel('colGPac',[{v:'',t:'Todos'},...pCol.map(p=>({v:p,t:p}))]);
   // FEST
-  popSel('festAno',aOAll(aFe),'');popSel('festMes',m0,'0');
-  popSel('calMes',mn_,ma);popSel('calAno',aOAll(aFe),'');
-  popSel('feCRAno',[{v:'todos',t:'Todos os anos'},...aO(aFe)],aFe[0]);popSel('feDAno',aOAll(aFe),'');
-  // FLX — ano principal com "Todos os anos"
-  popSel('flxAno',aOAll(aFlx),'');
+  popSel('festAno',aO(aFe),aFe[0]);popSel('festMes',m0,'0');
+  popSel('calMes',mn_,ma);popSel('calAno',aO(aFe),aFe[0]);
+  popSel('feCRAno',[{v:'todos',t:'Todos os anos'},...aO(aFe)],aFe[0]);popSel('feDAno',aO(aFe),aFe[0]);
+  // FLX
+  popSel('flxAno',aO(aFlx),aFlx[0]);
   popSel('flxCA1',aON(aFlx),aFlx[0]||'');popSel('flxCA2',aON(aFlx),aFlx[1]||'');popSel('flxCA3',aON(aFlx),aFlx[2]||'');
-  popSel('flxCDe',mn_,'1');popSel('flxCAte',mn_,ma);
-  popSel('flxCmAno',aOAll(aFlx),'');popSel('flxCmDe',mn_,'1');popSel('flxCmAte',mn_,ma);
-  popSel('flxPAAno',aOAll(aFlx),'');popSel('flxPADe',mn_,'1');popSel('flxPAAte',mn_,ma);
-  popSel('flxPBAno',aOAll(aFlx),'');popSel('flxPBDe',mn_,'1');popSel('flxPBAte',mn_,ma);
-  popSel('intelAno',aOAll(aFlx),'');popSel('intelDe',mn_,'1');popSel('intelAte',mn_,ma);
-  popSel('intelRA',aOAll(aFlx),'');popSel('intelRB',aOAll(aFlx),'');popSel('intelRM',mn_,ma);
-  popSel('semA1',aOAll(aFlx),'');popSel('semA2',aOAll(aFlx),'');
+  popSel('flxCDe',mnt,'1');popSel('flxCAte',mnt,ma);
+  popSel('flxCmAno',aO(aFlx),aFlx[0]);popSel('flxCmDe',mn_,'1');popSel('flxCmAte',mn_,ma);
+  popSel('flxPAAno',aO(aFlx),aFlx[1]||aFlx[0]);popSel('flxPADe',mn_,'1');popSel('flxPAAte',mn_,ma);
+  popSel('flxPBAno',aO(aFlx),aFlx[0]);popSel('flxPBDe',mn_,'1');popSel('flxPBAte',mn_,ma);
+  popSel('intelAno',aO(aFlx),aFlx[0]);popSel('intelDe',mn_,'1');popSel('intelAte',mn_,ma);
+  popSel('intelRA',aO(aFlx),aFlx[1]||aFlx[0]);popSel('intelRB',aO(aFlx),aFlx[0]);popSel('intelRM',mn_,ma);
+  popSel('semA1',aO(aFlx),aFlx[1]||aFlx[0]);popSel('semA2',aO(aFlx),aFlx[0]);
   popSel('semM1',mn_,ma);popSel('semM2',mn_,ma);
   ['semS1','semS2'].forEach(id=>popSel(id,[1,2,3,4,5].map(n=>({v:String(n),t:'Semana '+n})),'1'));
-  popSel('comRADe',mn_,'1');popSel('comRAAte',mn_,ma);popSel('comRAAno',aOAll(aAll),'');
-  popSel('comRBDe',mn_,'1');popSel('comRBAte',mn_,ma);popSel('comRBAno',aOAll(aAll),'');
-  // V360
+  popSel('comRADe',mn_,'1');popSel('comRAAte',mn_,ma);popSel('comRAAno',aO(aAll),aAll[1]||aAll[0]);
+  popSel('comRBDe',mn_,'1');popSel('comRBAte',mn_,ma);popSel('comRBAno',aO(aAll),aAll[0]);
+  // V360: anos de todas as bases
   popSel('v360FiltroAno',[{v:'',t:'Todos os anos'},...aAll.map(a=>({v:a,t:a}))]);
   initMesFlags();updBadge();
 };
@@ -1914,7 +1913,7 @@ function renderFlx(){
 function renderComp(){
   const anos=[document.getElementById('flxCA1').value,document.getElementById('flxCA2').value,document.getElementById('flxCA3').value].filter(v=>v&&v!=='').filter((v,i,a)=>a.indexOf(v)===i);
   if(!anos.length)return;
-  const de=parseDe(document.getElementById('flxCDe')?.value),ate=parseAte(document.getElementById('flxCAte')?.value);
+  const de=parseInt(document.getElementById('flxCDe')?.value||1),ate=parseInt(document.getElementById('flxCAte')?.value||12);
   if(de>ate)return;
   const ent=DB.flx.filter(r=>anos.some(a=>sameAno(r.ANO,a))&&r.FLUXO==='Entrada'&&(typeof r.MES_NUM==='number'?r.MES_NUM:parseInt(r.MES_NUM||0))>=de&&(typeof r.MES_NUM==='number'?r.MES_NUM:parseInt(r.MES_NUM||0))<=ate);
   const sai=DB.flx.filter(r=>anos.some(a=>sameAno(r.ANO,a))&&r.FLUXO==='Saída'&&(typeof r.MES_NUM==='number'?r.MES_NUM:parseInt(r.MES_NUM||0))>=de&&(typeof r.MES_NUM==='number'?r.MES_NUM:parseInt(r.MES_NUM||0))<=ate);
@@ -1943,7 +1942,7 @@ function renderComp(){
 
 function renderIntel(){
   const ano=document.getElementById('intelAno')?.value;if(!ano)return;
-  const de=parseDe(document.getElementById('intelDe')?.value),ate=parseAte(document.getElementById('intelAte')?.value);
+  const de=parseInt(document.getElementById('intelDe')?.value||1),ate=parseInt(document.getElementById('intelAte')?.value||12);
   // Usa TODOS os dados do fluxo do ano, filtrado por período De-Até
   const ent=DB.flx.filter(r=>r.ANO===ano&&r.FLUXO==='Entrada'&&r.MES_NUM>=de&&r.MES_NUM<=ate&&r.MES_NUM>=1&&r.MES_NUM<=12);
   const recT=ent.reduce((s,r)=>s+r.VALOR,0);
@@ -2130,13 +2129,13 @@ const engDormFlxSomente=(minMes)=>{
 document.getElementById('ctAno')?.addEventListener('change',renderCT);
 document.getElementById('colAno')?.addEventListener('change',renderCol);
 document.getElementById('btnCtAgr')?.addEventListener('click',()=>{ctAgr=!ctAgr;const b=document.getElementById('btnCtAgr');b.textContent=ctAgr?'📦 Desagrupar':'📦 Agrupar Pacotes';b.classList.toggle('on',ctAgr);renderCT();});
-document.getElementById('btnCtR')?.addEventListener('click',()=>{const r=engRec(DB.ct,document.getElementById('ctCRAno').value,parseDe(document.getElementById('ctCRDe').value),parseAte(document.getElementById('ctCRAte').value),parseInt(document.getElementById('ctCRMin').value),parseInt(document.getElementById('ctCRChurn').value),document.getElementById('ctCRTur').value);showRec('ctCRK','ctCRTb',r,document.getElementById('ctCRAno').value);});
-document.getElementById('btnCtP')?.addEventListener('click',()=>{const r=engPerComSaldo(DB.ct,parseDe(document.getElementById('ctPADe').value),parseAte(document.getElementById('ctPAAte').value),document.getElementById('ctPAAno').value,parseDe(document.getElementById('ctPBDe').value),parseAte(document.getElementById('ctPBAte').value),document.getElementById('ctPBAno').value);showPerCTCOL('ctCPK','ctCPTb',r,document.getElementById('ctPAAno').value,document.getElementById('ctPBAno').value);});
+document.getElementById('btnCtR')?.addEventListener('click',()=>{const r=engRec(DB.ct,document.getElementById('ctCRAno').value,parseInt(document.getElementById('ctCRDe').value),parseInt(document.getElementById('ctCRAte').value),parseInt(document.getElementById('ctCRMin').value),parseInt(document.getElementById('ctCRChurn').value),document.getElementById('ctCRTur').value);showRec('ctCRK','ctCRTb',r,document.getElementById('ctCRAno').value);});
+document.getElementById('btnCtP')?.addEventListener('click',()=>{const r=engPerComSaldo(DB.ct,parseInt(document.getElementById('ctPADe').value),parseInt(document.getElementById('ctPAAte').value),document.getElementById('ctPAAno').value,parseInt(document.getElementById('ctPBDe').value),parseInt(document.getElementById('ctPBAte').value),document.getElementById('ctPBAno').value);showPerCTCOL('ctCPK','ctCPTb',r,document.getElementById('ctPAAno').value,document.getElementById('ctPBAno').value);});
 document.getElementById('btnCtD')?.addEventListener('click',()=>{const r=engDorm(DB.ct,document.getElementById('ctDAno').value,parseInt(document.getElementById('ctDMes').value),document.getElementById('ctDPac').value);document.getElementById('ctDTb').innerHTML='<thead><tr><th>#</th><th>Aluno</th><th>Pacote</th><th>Turno</th><th>Último uso</th><th>Meses parado</th><th>Saldo</th><th>H.realizadas</th><th>Score</th></tr></thead><tbody>'+r.map((c,i)=>'<tr><td>'+(i+1)+'</td><td style="font-weight:700">'+c.nome+'</td><td>'+(c.pac||'—')+'</td><td>'+(tagTur(c.tur)||'—')+'</td><td class="c">'+(MSH[c.uMes-1]||c.uMes)+'/'+c.uAno+'</td><td class="c" style="color:#dc2626;font-weight:700">'+c.mp+'m</td><td class="r" style="color:'+(c.saldo<=0?'#dc2626':c.saldo<5?'#d97706':'inherit')+'">'+c.saldo.toFixed(1)+'h</td><td class="r">'+fmtH(c.hR)+'</td><td>'+scBar(c.sc)+'</td></tr>').join('')+'</tbody>';});
 document.getElementById('btnCtSA')?.addEventListener('click',()=>{const r=engSA(DB.ct,document.getElementById('ctSAAno').value,parseFloat(document.getElementById('ctSASaldo').value),parseInt(document.getElementById('ctSAMes').value));const risco=s=>s>=10?'<span class="ba ba-err">🔴 Alto</span>':s>=5?'<span class="ba ba-w">🟡 Médio</span>':'<span class="ba ba-ok">🟢 Baixo</span>';document.getElementById('ctSATb').innerHTML='<thead><tr><th>#</th><th>Aluno</th><th>Pacote</th><th>Saldo</th><th>Último uso</th><th>Meses parado</th><th>Risco</th></tr></thead><tbody>'+r.map((c,i)=>'<tr><td>'+(i+1)+'</td><td style="font-weight:700">'+c.nome+'</td><td>'+(c.pac||'—')+'</td><td class="r" style="color:#2563eb;font-weight:700">'+c.saldo.toFixed(1)+'h</td><td class="c">'+(MSH[c.uMes-1]||c.uMes)+'/'+c.uAno+'</td><td class="c">'+c.mp+'m</td><td>'+risco(c.saldo)+'</td></tr>').join('')+'</tbody>';});
 // COL comercial
-document.getElementById('btnColR')?.addEventListener('click',()=>{const r=engRec(DB.col,document.getElementById('colCRAno').value,parseDe(document.getElementById('colCRDe').value),parseAte(document.getElementById('colCRAte').value),parseInt(document.getElementById('colCRMin').value),parseInt(document.getElementById('colCRChurn').value),'');showRec('colCRK','colCRTb',r,document.getElementById('colCRAno').value);});
-document.getElementById('btnColP')?.addEventListener('click',()=>{const r=engPerComSaldo(DB.col,parseDe(document.getElementById('colPADe').value),parseAte(document.getElementById('colPAAte').value),document.getElementById('colPAAno').value,parseDe(document.getElementById('colPBDe').value),parseAte(document.getElementById('colPBAte').value),document.getElementById('colPBAno').value);showPerCTCOL('colCPK','colCPTb',r,document.getElementById('colPAAno').value,document.getElementById('colPBAno').value);});
+document.getElementById('btnColR')?.addEventListener('click',()=>{const r=engRec(DB.col,document.getElementById('colCRAno').value,parseInt(document.getElementById('colCRDe').value),parseInt(document.getElementById('colCRAte').value),parseInt(document.getElementById('colCRMin').value),parseInt(document.getElementById('colCRChurn').value),'');showRec('colCRK','colCRTb',r,document.getElementById('colCRAno').value);});
+document.getElementById('btnColP')?.addEventListener('click',()=>{const r=engPerComSaldo(DB.col,parseInt(document.getElementById('colPADe').value),parseInt(document.getElementById('colPAAte').value),document.getElementById('colPAAno').value,parseInt(document.getElementById('colPBDe').value),parseInt(document.getElementById('colPBAte').value),document.getElementById('colPBAno').value);showPerCTCOL('colCPK','colCPTb',r,document.getElementById('colPAAno').value,document.getElementById('colPBAno').value);});
 // FESTINHAS
 // [renderFest replaced by mega_patch]
 document.getElementById('festAno')?.addEventListener('change',renderFest);
@@ -2158,9 +2157,9 @@ document.getElementById('btnSem')?.addEventListener('click',()=>{const prods=[..
 ['intelAno','intelDe','intelAte'].forEach(id=>document.getElementById(id)?.addEventListener('change',renderIntel));
 document.getElementById('btnIntelR')?.addEventListener('click',()=>{const aA=document.getElementById('intelRA').value,aB=document.getElementById('intelRB').value,mes=document.getElementById('intelRM').value;const sA=new Set(DB.flx.filter(r=>r.ANO===aA&&r.MES_NUM===parseInt(mes)&&r.FLUXO==='Entrada'&&r.NOME).map(r=>r.NOME));const sB=new Set(DB.flx.filter(r=>r.ANO===aB&&r.MES_NUM===parseInt(mes)&&r.FLUXO==='Entrada'&&r.NOME).map(r=>r.NOME));const ret=[...sA].filter(n=>sB.has(n)).length,nov=[...sB].filter(n=>!sA.has(n)).length,churn=[...sA].filter(n=>!sB.has(n)).length;const taxa=sA.size?((ret/sA.size)*100).toFixed(1):0;document.getElementById('intelRK').innerHTML='<div class="kpi ok"><div class="lb">Retidos</div><div class="vl">'+ret+'</div></div><div class="kpi"><div class="lb">Novos</div><div class="vl">'+nov+'</div></div><div class="kpi err"><div class="lb">Churn</div><div class="vl">'+churn+'</div></div><div class="kpi '+(parseFloat(taxa)>=70?'ok':parseFloat(taxa)>=40?'w':'err')+'"><div class="lb">Taxa retenção</div><div class="vl">'+taxa+'%</div></div>';if(!CH['ret_i']){mkC('intelcR','bar');mkC('intelcRF','bar');CH['ret_i']=true;}updC('intelcR',['Retidos','Novos','Churn'],[{label:'Clientes',data:[ret,nov,churn],backgroundColor:['#16a34a','#2563eb','#dc2626']}]);const rRet=DB.flx.filter(r=>r.ANO===aB&&r.MES_NUM===parseInt(mes)&&r.FLUXO==='Entrada'&&sA.has(r.NOME)&&sB.has(r.NOME)).reduce((s,r)=>s+r.VALOR,0);const rChurn=DB.flx.filter(r=>r.ANO===aA&&r.MES_NUM===parseInt(mes)&&r.FLUXO==='Entrada'&&sA.has(r.NOME)&&!sB.has(r.NOME)).reduce((s,r)=>s+r.VALOR,0);updC('intelcRF',['Receita retida','Receita perdida'],[{label:'R$',data:[rRet,rChurn],backgroundColor:['#16a34a','#dc2626']}],scY(fmt));});
 // COMERCIAL FLUXO — Bloco 3 Dormentes usa CT+COL realizados
-document.getElementById('btnFlxCmR')?.addEventListener('click',()=>{const ano=document.getElementById('flxCmAno').value,de=parseDe(document.getElementById('flxCmDe').value),ate=parseAte(document.getElementById('flxCmAte').value),minM=parseInt(document.getElementById('flxCmMin').value),churn=parseInt(document.getElementById('flxCmChurn').value);const por={};filFlx(ano,[]).filter(r=>r.FLUXO==='Entrada'&&r.MES_NUM>=de&&r.MES_NUM<=ate&&r.NOME).forEach(r=>{const n=r.NOME,m=mNumFlx(r);if(!por[n])por[n]={meses:new Set(),v:0,uMes:0};por[n].meses.add(m);por[n].v+=r.VALOR;if(m>por[n].uMes)por[n].uMes=m;});const r=Object.entries(por).filter(([,c])=>c.meses.size>=minM&&(ate-c.uMes)>=churn).map(([nome,c])=>({nome,qtdM:c.meses.size,uMes:c.uMes,mP:ate-c.uMes,v:c.v,sc:scFn(c.v,ate-c.uMes,c.meses.size)})).sort((a,b)=>b.sc-a.sc);document.getElementById('flxCmRK').innerHTML='<div class="kpi err"><div class="lb">Em queda</div><div class="vl">'+r.length+'</div></div><div class="kpi w"><div class="lb">Valor em risco</div><div class="vl">'+fmt(r.reduce((s,c)=>s+c.v,0))+'</div></div>';const pb=s=>s>=70?'<span class="ba ba-err">🔴</span>':s>=40?'<span class="ba ba-w">🟡</span>':'<span class="ba ba-ok">🟢</span>';document.getElementById('flxCmRTb').innerHTML='<thead><tr><th>#</th><th>Cliente</th><th>Meses ativos</th><th>Último mês</th><th>Meses parado</th><th>Valor</th><th>Prioridade</th></tr></thead><tbody>'+r.map((c,i)=>'<tr><td>'+(i+1)+'</td><td style="font-weight:700">'+c.nome+'</td><td class="c">'+c.qtdM+'</td><td class="c">'+(MSH[c.uMes-1]||c.uMes)+'/'+ano+'</td><td class="c" style="color:#dc2626;font-weight:700">'+c.mP+'m</td><td class="r">'+fmt(c.v)+'</td><td>'+pb(c.sc)+' '+scBar(c.sc)+'</td></tr>').join('')+'</tbody>';});
+document.getElementById('btnFlxCmR')?.addEventListener('click',()=>{const ano=document.getElementById('flxCmAno').value,de=parseInt(document.getElementById('flxCmDe').value),ate=parseInt(document.getElementById('flxCmAte').value),minM=parseInt(document.getElementById('flxCmMin').value),churn=parseInt(document.getElementById('flxCmChurn').value);const por={};filFlx(ano,[]).filter(r=>r.FLUXO==='Entrada'&&r.MES_NUM>=de&&r.MES_NUM<=ate&&r.NOME).forEach(r=>{const n=r.NOME,m=mNumFlx(r);if(!por[n])por[n]={meses:new Set(),v:0,uMes:0};por[n].meses.add(m);por[n].v+=r.VALOR;if(m>por[n].uMes)por[n].uMes=m;});const r=Object.entries(por).filter(([,c])=>c.meses.size>=minM&&(ate-c.uMes)>=churn).map(([nome,c])=>({nome,qtdM:c.meses.size,uMes:c.uMes,mP:ate-c.uMes,v:c.v,sc:scFn(c.v,ate-c.uMes,c.meses.size)})).sort((a,b)=>b.sc-a.sc);document.getElementById('flxCmRK').innerHTML='<div class="kpi err"><div class="lb">Em queda</div><div class="vl">'+r.length+'</div></div><div class="kpi w"><div class="lb">Valor em risco</div><div class="vl">'+fmt(r.reduce((s,c)=>s+c.v,0))+'</div></div>';const pb=s=>s>=70?'<span class="ba ba-err">🔴</span>':s>=40?'<span class="ba ba-w">🟡</span>':'<span class="ba ba-ok">🟢</span>';document.getElementById('flxCmRTb').innerHTML='<thead><tr><th>#</th><th>Cliente</th><th>Meses ativos</th><th>Último mês</th><th>Meses parado</th><th>Valor</th><th>Prioridade</th></tr></thead><tbody>'+r.map((c,i)=>'<tr><td>'+(i+1)+'</td><td style="font-weight:700">'+c.nome+'</td><td class="c">'+c.qtdM+'</td><td class="c">'+(MSH[c.uMes-1]||c.uMes)+'/'+ano+'</td><td class="c" style="color:#dc2626;font-weight:700">'+c.mP+'m</td><td class="r">'+fmt(c.v)+'</td><td>'+pb(c.sc)+' '+scBar(c.sc)+'</td></tr>').join('')+'</tbody>';});
 
-document.getElementById('btnFlxCmP')?.addEventListener('click',()=>{const aDe=parseDe(document.getElementById('flxPADe').value),aAte=parseAte(document.getElementById('flxPAAte').value),aAno=document.getElementById('flxPAAno').value,bDe=parseDe(document.getElementById('flxPBDe').value),bAte=parseAte(document.getElementById('flxPBAte').value),bAno=document.getElementById('flxPBAno').value;const fil=(ano,de,ate)=>filFlx(ano,[]).filter(r=>r.FLUXO==='Entrada'&&mNumFlx(r)>=de&&mNumFlx(r)<=ate&&r.NOME);const cA={},cB={};fil(aAno,aDe,aAte).forEach(r=>{const n=r.NOME;if(!cA[n])cA[n]={v:0,u:0};cA[n].v+=r.VALOR;cA[n].u++;});fil(bAno,bDe,bAte).forEach(r=>{const n=r.NOME;if(!cB[n])cB[n]={v:0};cB[n].v+=r.VALOR;});const res=Object.entries(cA).map(([nome,a])=>({nome,vA:a.v,uA:a.u,noB:!!cB[nome],vB:cB[nome]?.v||0})).sort((a,b)=>a.noB-b.noB||b.vA-a.vA);const perd=res.filter(c=>!c.noB),ret=res.filter(c=>c.noB);document.getElementById('flxCmPK').innerHTML='<div class="kpi"><div class="lb">No Per.A</div><div class="vl">'+res.length+'</div></div><div class="kpi ok"><div class="lb">Retidos</div><div class="vl">'+ret.length+'</div></div><div class="kpi err"><div class="lb">Perdidos</div><div class="vl">'+perd.length+'</div></div><div class="kpi w"><div class="lb">Valor em risco</div><div class="vl">'+fmt(perd.reduce((s,c)=>s+c.vA,0))+'</div></div><div class="kpi ok"><div class="lb">Taxa retenção</div><div class="vl">'+(res.length?((ret.length/res.length)*100).toFixed(0)+'%':'0%')+'</div></div>';document.getElementById('flxCmPTb').innerHTML='<thead><tr><th>#</th><th>Cliente</th><th>Valor Per.A</th><th>Usos</th><th>Per.B?</th><th>Valor Per.B</th><th>Ação</th></tr></thead><tbody>'+res.map((c,i)=>'<tr style="'+((!c.noB)?'background:#fff8f8':'')+'"><td>'+(i+1)+'</td><td style="font-weight:700">'+c.nome+'</td><td class="r">'+fmt(c.vA)+'</td><td class="c">'+c.uA+'</td><td class="c" style="color:'+(c.noB?'#16a34a':'#dc2626')+';font-weight:700">'+(c.noB?'Sim':'Não')+'</td><td class="r">'+(c.vB>0?fmt(c.vB):'—')+'</td><td style="font-size:12px">'+(c.noB?'<span style="color:#16a34a">✅ Retido</span>':c.vA>=2000?'📞 Ligar':c.vA>=500?'📱 WhatsApp':'📧 E-mail')+'</td></tr>').join('')+'</tbody>';});
+document.getElementById('btnFlxCmP')?.addEventListener('click',()=>{const aDe=parseInt(document.getElementById('flxPADe').value),aAte=parseInt(document.getElementById('flxPAAte').value),aAno=document.getElementById('flxPAAno').value,bDe=parseInt(document.getElementById('flxPBDe').value),bAte=parseInt(document.getElementById('flxPBAte').value),bAno=document.getElementById('flxPBAno').value;const fil=(ano,de,ate)=>filFlx(ano,[]).filter(r=>r.FLUXO==='Entrada'&&mNumFlx(r)>=de&&mNumFlx(r)<=ate&&r.NOME);const cA={},cB={};fil(aAno,aDe,aAte).forEach(r=>{const n=r.NOME;if(!cA[n])cA[n]={v:0,u:0};cA[n].v+=r.VALOR;cA[n].u++;});fil(bAno,bDe,bAte).forEach(r=>{const n=r.NOME;if(!cB[n])cB[n]={v:0};cB[n].v+=r.VALOR;});const res=Object.entries(cA).map(([nome,a])=>({nome,vA:a.v,uA:a.u,noB:!!cB[nome],vB:cB[nome]?.v||0})).sort((a,b)=>a.noB-b.noB||b.vA-a.vA);const perd=res.filter(c=>!c.noB),ret=res.filter(c=>c.noB);document.getElementById('flxCmPK').innerHTML='<div class="kpi"><div class="lb">No Per.A</div><div class="vl">'+res.length+'</div></div><div class="kpi ok"><div class="lb">Retidos</div><div class="vl">'+ret.length+'</div></div><div class="kpi err"><div class="lb">Perdidos</div><div class="vl">'+perd.length+'</div></div><div class="kpi w"><div class="lb">Valor em risco</div><div class="vl">'+fmt(perd.reduce((s,c)=>s+c.vA,0))+'</div></div><div class="kpi ok"><div class="lb">Taxa retenção</div><div class="vl">'+(res.length?((ret.length/res.length)*100).toFixed(0)+'%':'0%')+'</div></div>';document.getElementById('flxCmPTb').innerHTML='<thead><tr><th>#</th><th>Cliente</th><th>Valor Per.A</th><th>Usos</th><th>Per.B?</th><th>Valor Per.B</th><th>Ação</th></tr></thead><tbody>'+res.map((c,i)=>'<tr style="'+((!c.noB)?'background:#fff8f8':'')+'"><td>'+(i+1)+'</td><td style="font-weight:700">'+c.nome+'</td><td class="r">'+fmt(c.vA)+'</td><td class="c">'+c.uA+'</td><td class="c" style="color:'+(c.noB?'#16a34a':'#dc2626')+';font-weight:700">'+(c.noB?'Sim':'Não')+'</td><td class="r">'+(c.vB>0?fmt(c.vB):'—')+'</td><td style="font-size:12px">'+(c.noB?'<span style="color:#16a34a">✅ Retido</span>':c.vA>=2000?'📞 Ligar':c.vA>=500?'📱 WhatsApp':'📧 E-mail')+'</td></tr>').join('')+'</tbody>';});
 
 // Bloco 3 Dormentes — usa CT+COL realizados (última VISITA real, não compra)
 document.getElementById('btnFlxD')?.addEventListener('click',()=>{
@@ -2343,11 +2342,11 @@ document.getElementById('btnComD')?.addEventListener('click', () => {
 
 // ── Listener btnComR com coluna flag ──────────────────
 document.getElementById('btnComR')?.addEventListener('click', () => {
-  const aDe=parseDe(document.getElementById('comRADe').value);
-  const aAte=parseAte(document.getElementById('comRAAte').value);
+  const aDe=parseInt(document.getElementById('comRADe').value);
+  const aAte=parseInt(document.getElementById('comRAAte').value);
   const aAno=document.getElementById('comRAAno').value;
-  const bDe=parseDe(document.getElementById('comRBDe').value);
-  const bAte=parseAte(document.getElementById('comRBAte').value);
+  const bDe=parseInt(document.getElementById('comRBDe').value);
+  const bAte=parseInt(document.getElementById('comRBAte').value);
   const bAno=document.getElementById('comRBAno').value;
   const prod=document.getElementById('comRProd').value;
   const soRes=document.getElementById('comRSoRes')?.checked;
@@ -2572,48 +2571,28 @@ const gdConfigure = async () => {
   const cid = el && el.value.trim();
   if (!cid) { alert('Informe o Client ID OAuth 2.0.'); return; }
   GD.CLIENT_ID = cid;
-  // Salva em localStorage (permanente, sobrevive a limpeza de IDB e novas versões)
-  try { localStorage.setItem('bnq_gd_client_id', cid); } catch(e) {}
-  // Salva também no IDB como backup
   await iSet('meta', 'gdconfig', { CLIENT_ID: cid });
-  if (el) { el.style.borderColor = '#16a34a'; }
+  if (el) el.style.borderColor = '#16a34a';
   gdSetStatus('off', 'Client ID salvo — clique em Conectar');
   const btn = document.getElementById('btnGdLogin'); if (btn) btn.style.display = 'inline-flex';
 };
 const gdLoadConfig = async () => {
-  // 1. Tenta localStorage primeiro (sobrevive a qualquer limpeza de IDB)
-  let clientId = null;
-  try { clientId = localStorage.getItem('bnq_gd_client_id'); } catch(e) {}
-  // 2. Fallback: IDB
-  if (!clientId) {
-    const cfg = await iGet('meta', 'gdconfig');
-    if (cfg && cfg.CLIENT_ID) clientId = cfg.CLIENT_ID;
-  }
-  if (clientId) {
-    GD.CLIENT_ID = clientId;
-    const el = document.getElementById('gdClientId');
-    if (el) el.value = GD.CLIENT_ID;
-    // Garante que está salvo em ambos
-    try { localStorage.setItem('bnq_gd_client_id', clientId); } catch(e) {}
-    await iSet('meta', 'gdconfig', { CLIENT_ID: clientId });
+  const cfg = await iGet('meta', 'gdconfig');
+  if (cfg && cfg.CLIENT_ID) {
+    GD.CLIENT_ID = cfg.CLIENT_ID;
+    const el = document.getElementById('gdClientId'); if (el) el.value = GD.CLIENT_ID;
     const btn = document.getElementById('btnGdLogin'); if (btn) btn.style.display = 'inline-flex';
     gdSetStatus('off', 'Client ID carregado — clique em Conectar');
   }
-  // 3. Flags locais (fallback offline)
   const local = await iGet('meta', 'gdflags');
   if (local && Object.keys(local).length > 0) { GD.flags = local; }
-  // 4. Tenta auto-reconectar com token salvo (válido por ~58min)
   const saved = await iGet('meta', 'gdtoken');
   if (saved && saved.token && (Date.now() - saved.ts) < 3500000) {
     GD.TOKEN = saved.token;
     gdSetStatus('syncing', 'Reconectando...');
-    gdSyncFlags()
-      .then(()=>gdSetStatus('ok','☁️ Drive reconectado'))
-      .catch(async()=>{
-        GD.TOKEN = null;
-        await iDel('meta','gdtoken');
-        gdSetStatus('off','Token expirado — reconecte');
-      });
+    gdSyncFlags().then(()=>gdSetStatus('ok','☁️ Drive reconectado')).catch(async()=>{
+      GD.TOKEN = null; await iDel('meta','gdtoken'); gdSetStatus('off','Token expirado — reconecte');
+    });
   }
 };
 
