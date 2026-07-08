@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fluxo de Caixa — Brincar no Quintal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  .fld { width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:.85rem; background:#fff; }
+  .fld:focus { outline:2px solid #1e3a8a33; }
+  .lbl { font-size:.7rem; text-transform:uppercase; letter-spacing:.03em; color:#64748b; font-weight:600; }
+  ::-webkit-scrollbar { height:8px; width:8px; } ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
+</style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800">
+
+<main class="max-w-7xl mx-auto px-4 py-5">
+  <!-- Filtros + ações -->
+  <div class="flex items-end justify-between mb-4 flex-wrap gap-3">
+    <div class="flex items-end gap-2 flex-wrap bg-white border border-slate-200 rounded-lg px-3 py-2">
+      <div><span class="lbl">Ano</span><br><select id="fAno" class="fld !w-24"></select></div>
+      <div><span class="lbl">Mês</span><br><select id="fMes" class="fld !w-32"></select></div>
+      <div><span class="lbl">Fluxo</span><br><select id="fTipo" class="fld !w-28"><option value="todos">Todos</option><option>Entrada</option><option>Saída</option></select></div>
+      <div><span class="lbl">Grupo</span><br><select id="fGrupo" class="fld !w-44"></select></div>
+      <div><span class="lbl">Conta banc.</span><br><select id="fConta" class="fld !w-28"></select></div>
+      <div><span class="lbl">Buscar</span><br><input id="fBusca" class="fld !w-40" placeholder="detalhamento…"></div>
+      <button onclick="limpar()" class="text-xs text-blue-800 underline pb-2">limpar</button>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="exportarCSV()" class="bg-slate-700 text-white text-sm px-4 py-2 rounded hover:bg-slate-600">⬇ CSV</button>
+      <button onclick="abrirLanc(null)" class="bg-blue-900 text-white text-sm px-4 py-2 rounded hover:bg-blue-800">+ Novo lançamento</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+    <article class="bg-white rounded-lg p-4 border border-slate-200"><p class="text-xs text-slate-500">Entradas</p><p class="text-xl font-bold text-emerald-700" id="kEnt">—</p></article>
+    <article class="bg-white rounded-lg p-4 border border-slate-200"><p class="text-xs text-slate-500">Saídas</p><p class="text-xl font-bold text-red-700" id="kSai">—</p></article>
+    <article class="bg-white rounded-lg p-4 border border-slate-200"><p class="text-xs text-slate-500">Resultado</p><p class="text-xl font-bold" id="kRes">—</p></article>
+    <article class="bg-white rounded-lg p-4 border border-slate-200"><p class="text-xs text-slate-500">Lançamentos</p><p class="text-xl font-bold" id="kQtd">—</p></article>
+  </div>
+
+  <!-- Gráficos -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+    <article class="bg-white rounded-lg p-4 border border-slate-200"><h3 class="text-sm font-semibold text-slate-700 mb-2">Entradas × Saídas por mês</h3><canvas id="chMes" height="200"></canvas></article>
+    <article class="bg-white rounded-lg p-4 border border-slate-200"><h3 class="text-sm font-semibold text-slate-700 mb-2">Composição por grupo</h3><canvas id="chGrupo" height="200"></canvas></article>
+  </div>
+
+  <!-- Tabela -->
+  <div class="bg-white rounded-lg border border-slate-200 overflow-x-auto" id="tabela"></div>
+</main>
+
+<script src="shared/api.js"></script>
+<script src="shared/auth.js"></script>
+<script src="shared/ui.js"></script>
+<script>
+if (AUTH.protegerPagina('fluxo')) {
+
+UI.montarHeader('💰 Fluxo de Caixa');
+let charts = {};
+
+const MESES = { '01':'Jan','02':'Fev','03':'Mar','04':'Abr','05':'Mai','06':'Jun','07':'Jul','08':'Ago','09':'Set','10':'Out','11':'Nov','12':'Dez' };
+const P = () => (API.get() && API.get()._params) || {}; // parâmetros (podem vir do state futuramente)
+
+// Parâmetros (fallback embutido = os que extraí das suas bases)
+const PARAMS = {
+  grupos: ["Colônia de Férias","Contraturno","Festinha","Oficina","Evento Escolar","Aluguel Sala","Outras Entradas",
+           "Despesa com Pessoal","Despesas Administrativas","Despesas Financeiras","Fornecedores","Despesas Manutenção",
+           "Obras Iniciais","Impostos","Aluguéis","Devolução de Vendas","Retirada Sócio","Transferência","Cartão","Dinheiro","Troca","Brinde","Outras Saídas"],
+  contas_entrada: ["Colônia de Férias","Contraturno - Pacotes","Buffet Festinhas","Oficinas","Eventos Escolares","Aluguel Sala","Locação Sala","Outras Entradas"],
+  contas_saida: ["Despesa com Pessoal - Oficial","Despesa com Pessoal - Backup","Despesa com Pessoal - Extra","Despesas Financeiras","Água Mineral","Material de Expediente","Manutenção Predial","Obras Iniciais","Impostos","Lanches e Refeições","Materiais para Oficinas","Água e Esgoto","Telefones e Internet","Energia Elétrica","Aluguel","Contador","Devolução de Vendas","Mídias Sociais","Gás e Água","Material para Festinhas","Material de Limpeza","Transportes (Combust/Táxi)","Brinquedos","Tecnologia e Computadores","Medicamentos, Exames","Sistemas de Informática","Retirada Sócio","Fardamento, EPIs e EPCs","Troca Colônia/Contraturno","Outras Saídas"],
+  contas_banc: ["PJ","PF","Dinheiro","Sócio"],
+  origem_lead: ["Instagram","Indicação","Patrocinado","Google","Festinha","Outros"],
+  turnos: ["Manhã","Tarde","Integral"],
+};
+
+// Pacotes vêm do state (aba param via importação) OU fallback
+function pacotes() {
+  const p = API.tabela('param_pacotes');
+  if (p && p.length) return p;
+  return [
+    { nome_pacote:'Pacote Sorvete', programa:'Contraturno', qtd_horas_ou_turnos:5,  valor_R$:0 },
+    { nome_pacote:'Pacote Colorê',  programa:'Contraturno', qtd_horas_ou_turnos:20, valor_R$:0 },
+    { nome_pacote:'Colônia de Férias', programa:'Colonia',  qtd_horas_ou_turnos:1,  valor_R$:0 },
+  ];
+}
+
+/* ============ FILTROS ============ */
+function dados() { return API.tabela('fluxo_caixa'); }
+function filtrado() {
+  const ano = document.getElementById('fAno').value, mes = document.getElementById('fMes').value;
+  const tipo = document.getElementById('fTipo').value, grupo = document.getElementById('fGrupo').value;
+  const conta = document.getElementById('fConta').value, q = (document.getElementById('fBusca').value || '').toLowerCase();
+  return dados().filter(r => {
+    const a = String(r.ano || (r.data || '').slice(0, 4)), m = String(r.mes || (r.data || '').slice(5, 7)).padStart(2, '0');
+    return (ano === 'todos' || a === ano) && (mes === 'todos' || m === mes) &&
+      (tipo === 'todos' || r.fluxo === tipo) && (grupo === 'todos' || r.grupo === grupo) &&
+      (conta === 'todos' || r.conta === conta) &&
+      (!q || (r.detalhamento || '').toLowerCase().includes(q) || (r.conta_contabil || '').toLowerCase().includes(q));
+  });
+}
+
+function preencherFiltros() {
+  const anos = [...new Set(dados().map(r => String(r.ano || (r.data || '').slice(0, 4))).filter(Boolean))].sort();
+  const set = (id, html) => { const s = document.getElementById(id); const v = s.value; s.innerHTML = html; if ([...s.options].some(o => o.value === v)) s.value = v; };
+  set('fAno', '<option value="todos">Todos</option>' + anos.map(a => `<option>${a}</option>`).join(''));
+  set('fMes', '<option value="todos">Todos</option>' + Object.entries(MESES).map(([k, v]) => `<option value="${k}">${v}</option>`).join(''));
+  set('fGrupo', '<option value="todos">Todos</option>' + PARAMS.grupos.map(g => `<option>${g}</option>`).join(''));
+  set('fConta', '<option value="todos">Todas</option>' + PARAMS.contas_banc.map(c => `<option>${c}</option>`).join(''));
+}
+
+/* ============ RENDER ============ */
+function render() {
+  const list = filtrado();
+  const ent = list.filter(r => r.fluxo === 'Entrada').reduce((s, r) => s + (+r.valor || 0), 0);
+  const sai = list.filter(r => r.fluxo === 'Saída').reduce((s, r) => s + (+r.valor || 0), 0);
+  document.getElementById('kEnt').textContent = UI.fmtBRL(ent);
+  document.getElementById('kSai').textContent = UI.fmtBRL(sai);
+  const res = document.getElementById('kRes'); res.textContent = UI.fmtBRL(ent - sai);
+  res.className = 'text-xl font-bold ' + (ent - sai >= 0 ? 'text-emerald-700' : 'text-red-700');
+  document.getElementById('kQtd').textContent = list.length;
+
+  // gráfico por mês
+  const porMes = {};
+  for (const r of list) {
+    const m = String(r.mes || (r.data || '').slice(5, 7)).padStart(2, '0');
+    porMes[m] = porMes[m] || { e: 0, s: 0 };
+    if (r.fluxo === 'Entrada') porMes[m].e += (+r.valor || 0); else porMes[m].s += (+r.valor || 0);
+  }
+  const mk = Object.keys(porMes).sort();
+  destruir('chMes');
+  charts.chMes = new Chart(document.getElementById('chMes'), {
+    type: 'bar',
+    data: { labels: mk.map(m => MESES[m] || m), datasets: [
+      { label: 'Entradas', data: mk.map(m => porMes[m].e), backgroundColor: '#047857' },
+      { label: 'Saídas', data: mk.map(m => porMes[m].s), backgroundColor: '#b91c1c' },
+    ] },
+    options: { plugins: { legend: { position: 'bottom' } } }
+  });
+
+  // gráfico por grupo
+  const porGrupo = {};
+  for (const r of list) porGrupo[r.grupo || '—'] = (porGrupo[r.grupo || '—'] || 0) + (+r.valor || 0);
+  const gk = Object.entries(porGrupo).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  destruir('chGrupo');
+  charts.chGrupo = new Chart(document.getElementById('chGrupo'), {
+    type: 'bar',
+    data: { labels: gk.map(g => g[0]), datasets: [{ data: gk.map(g => g[1]), backgroundColor: '#1e3a8a' }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } } }
+  });
+
+  // tabela
+  const rows = [...list].sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+  document.getElementById('tabela').innerHTML = `<table class="w-full text-sm">
+    <thead class="bg-slate-800 text-white text-xs uppercase sticky top-0"><tr>
+      <th class="px-3 py-2 text-left">Data</th><th class="px-3 py-2 text-left">Fluxo</th>
+      <th class="px-3 py-2 text-left">Grupo / Conta</th><th class="px-3 py-2 text-left">Detalhamento</th>
+      <th class="px-3 py-2 text-left">Resp.</th><th class="px-3 py-2 text-right">Valor</th>
+      <th class="px-3 py-2 text-center">Banc.</th><th class="px-3 py-2"></th></tr></thead><tbody>
+    ${rows.length ? rows.map(r => {
+      const resp = API.tabela('responsaveis').find(x => x.cod === r.cod_responsavel);
+      return `<tr class="border-b border-slate-100 hover:bg-slate-50">
+        <td class="px-3 py-2 whitespace-nowrap">${r.data || ''}</td>
+        <td class="px-3 py-2">${r.fluxo === 'Entrada' ? '<span class="text-emerald-700">▲ Entrada</span>' : '<span class="text-red-700">▼ Saída</span>'}</td>
+        <td class="px-3 py-2 text-xs">${UI.esc(r.grupo || '')}<br><span class="text-slate-500">${UI.esc(r.conta_contabil || '')}</span></td>
+        <td class="px-3 py-2">${UI.esc(r.detalhamento || '')}${r.horas ? ` <span class="text-xs text-cyan-700">(${r.horas}h/turno)</span>` : ''}</td>
+        <td class="px-3 py-2 text-xs">${resp ? UI.esc(resp.nome) : '—'}</td>
+        <td class="px-3 py-2 text-right font-semibold ${r.fluxo === 'Saída' ? 'text-red-700' : 'text-emerald-700'}">${UI.fmtBRL(r.valor)}</td>
+        <td class="px-3 py-2 text-center text-xs">${r.conta || ''}</td>
+        <td class="px-3 py-2 text-center whitespace-nowrap">
+          <button onclick="abrirLanc('${r.id}')" class="text-blue-800 text-xs underline">editar</button>
+          <button onclick="excluir('${r.id}')" class="text-red-600 text-xs underline ml-1">excluir</button></td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="8" class="p-6 text-center text-slate-400 text-sm">Nenhum lançamento no filtro.</td></tr>'}
+    </tbody></table>`;
+}
+function destruir(n) { if (charts[n]) { charts[n].destroy(); delete charts[n]; } }
+
+/* ============ LANÇAMENTO (form) ============ */
+function abrirLanc(id) {
+  const r = id ? dados().find(x => x.id === id) : { data: UI.hoje(), fluxo: 'Entrada', conta: 'PJ' };
+  const resps = [...API.tabela('responsaveis')].sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+  UI.modal(`<div class="p-5">
+    <div class="flex justify-between items-center mb-3">
+      <h3 class="font-bold text-lg">${id ? '✏ Editar' : '➕ Novo'} lançamento</h3>
+      <button onclick="UI.fecharModal()" class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
+    </div>
+    <div class="grid grid-cols-6 gap-2">
+      <div class="col-span-2"><span class="lbl">Data</span><input type="date" id="l_data" class="fld" value="${r.data || UI.hoje()}"></div>
+      <div class="col-span-2"><span class="lbl">Fluxo</span><select id="l_fluxo" class="fld" onchange="atualizaContas()">
+        <option ${r.fluxo === 'Entrada' ? 'selected' : ''}>Entrada</option><option ${r.fluxo === 'Saída' ? 'selected' : ''}>Saída</option></select></div>
+      <div class="col-span-2"><span class="lbl">Conta bancária</span><select id="l_conta" class="fld">${PARAMS.contas_banc.map(c => `<option ${c === r.conta ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
+
+      <div class="col-span-3"><span class="lbl">Grupo</span><select id="l_grupo" class="fld">${PARAMS.grupos.map(g => `<option ${g === r.grupo ? 'selected' : ''}>${g}</option>`).join('')}</select></div>
+      <div class="col-span-3"><span class="lbl">Conta contábil</span><select id="l_conta_contabil" class="fld"></select></div>
+
+      <div class="col-span-6 border-t border-slate-200 mt-1 pt-2">
+        <label class="text-xs flex items-center gap-2"><input type="checkbox" id="l_ehVenda" onchange="toggleVenda()"> 🎟️ Este lançamento é uma <b>venda de pacote</b> (gera crédito no responsável)</label>
+      </div>
+      <div id="boxVenda" class="col-span-6 hidden grid grid-cols-6 gap-2 bg-blue-50 border border-blue-200 rounded p-2">
+        <div class="col-span-3"><span class="lbl">Responsável</span><select id="l_resp" class="fld"><option value="">—</option>${resps.map(x => `<option value="${x.cod}" ${x.cod === r.cod_responsavel ? 'selected' : ''}>${UI.esc(x.nome)} (${x.cod})</option>`).join('')}</select></div>
+        <div class="col-span-3"><span class="lbl">Pacote</span><select id="l_pacote" class="fld" onchange="autoPreencheVenda()"><option value="">—</option>${pacotes().map(p => `<option value="${p.nome_pacote}" data-prog="${p.programa}" data-qtd="${p.qtd_horas_ou_turnos}" data-val="${p['valor_R$'] || p.valor_R || 0}">${p.nome_pacote} (${p.programa})</option>`).join('')}</select></div>
+      </div>
+
+      <div class="col-span-4"><span class="lbl">Detalhamento</span><input id="l_det" class="fld" value="${UI.esc(r.detalhamento || '')}"></div>
+      <div class="col-span-2"><span class="lbl">Valor (R$)</span><input type="number" step="0.01" id="l_valor" class="fld" value="${r.valor || ''}"></div>
+
+      <div class="col-span-2"><span class="lbl">Qtd (h/turno)</span><input type="number" step="0.5" id="l_horas" class="fld" value="${r.horas || ''}"></div>
+      <div class="col-span-2"><span class="lbl">Canal (lead)</span><select id="l_lead" class="fld"><option value="">—</option>${PARAMS.origem_lead.map(o => `<option ${o === r.ori_lead ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
+      <div class="col-span-2"><span class="lbl">CPF p/ nota</span><input id="l_cpfnf" class="fld" value="${UI.esc(r.cpf_nf || '')}"></div>
+    </div>
+    <div class="flex justify-end gap-2 mt-4">
+      <button onclick="salvarLanc('${id || ''}')" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">💾 Salvar</button>
+    </div></div>`, 'max-w-3xl');
+
+  atualizaContas(r.conta_contabil);
+  if (r.cod_responsavel) { document.getElementById('l_ehVenda').checked = true; toggleVenda(); }
+}
+
+function atualizaContas(sel) {
+  const fluxo = document.getElementById('l_fluxo').value;
+  const lista = fluxo === 'Entrada' ? PARAMS.contas_entrada : PARAMS.contas_saida;
+  document.getElementById('l_conta_contabil').innerHTML = lista.map(c => `<option ${c === sel ? 'selected' : ''}>${c}</option>`).join('');
+}
+function toggleVenda() {
+  const on = document.getElementById('l_ehVenda').checked;
+  document.getElementById('boxVenda').classList.toggle('hidden', !on);
+  if (on) document.getElementById('l_fluxo').value = 'Entrada', atualizaContas();
+}
+function autoPreencheVenda() {
+  const opt = document.getElementById('l_pacote').selectedOptions[0];
+  if (!opt || !opt.value) return;
+  document.getElementById('l_horas').value = opt.dataset.qtd || '';
+  if (opt.dataset.val && +opt.dataset.val > 0) document.getElementById('l_valor').value = opt.dataset.val;
+  document.getElementById('l_det').value = 'Venda ' + opt.value;
+  // grupo/conta coerentes
+  document.getElementById('l_grupo').value = opt.dataset.prog === 'Colonia' ? 'Colônia de Férias' : 'Contraturno';
+  atualizaContas(opt.dataset.prog === 'Colonia' ? 'Colônia de Férias' : 'Contraturno - Pacotes');
+}
+
+async function salvarLanc(id) {
+  const g = k => document.getElementById('l_' + k)?.value;
+  const data = g('data');
+  const reg = {
+    id: id || undefined, data, mes: +data.slice(5, 7), ano: +data.slice(0, 4),
+    fluxo: g('fluxo'), grupo: g('grupo'), conta_contabil: g('conta_contabil'),
+    detalhamento: g('det'), valor: +g('valor') || 0, conta: g('conta'),
+    ori_lead: g('lead'), horas: +g('horas') || '', cpf_nf: g('cpfnf'),
+  };
+  if (!reg.valor) { UI.toast('Informe o valor.', 'erro'); return; }
+
+  const ehVenda = document.getElementById('l_ehVenda').checked;
+  const cod = ehVenda ? document.getElementById('l_resp').value : '';
+  const pacoteOpt = ehVenda ? document.getElementById('l_pacote').selectedOptions[0] : null;
+  if (ehVenda && !cod) { UI.toast('Selecione o responsável da venda.', 'erro'); return; }
+  reg.cod_responsavel = cod;
+
+  UI.syncBusy();
+  try {
+    const r = await API.upsert('fluxo_caixa', reg);
+    if (!r.ok) throw new Error(r.erro);
+
+    // Regra: venda de pacote gera crédito (movimento Contratado) no responsável
+    if (ehVenda && cod && pacoteOpt && pacoteOpt.value) {
+      const prog = pacoteOpt.dataset.prog || 'Contraturno';
+      const mov = {
+        data, cod_responsavel: cod, programa: prog, tipo_entrada: 'Contratado',
+        pacote: pacoteOpt.value, qtde: +(reg.horas || pacoteOpt.dataset.qtd || 0),
+        valor: reg.valor, id_fluxo: r.registro.id,
+        observacoes: 'Gerado pela venda no fluxo de caixa'
+      };
+      const rm = await API.upsert('movimentos', mov);
+      if (!rm.ok) throw new Error('crédito: ' + rm.erro);
+      UI.toast('Lançamento + crédito de ' + mov.qtde + (prog === 'Colonia' ? ' turno(s)' : 'h') + ' gerado.', 'ok');
+    } else {
+      UI.toast('Lançamento salvo.', 'ok');
+    }
+    UI.fecharModal(); UI.syncOk(); preencherFiltros(); render();
+  } catch (e) { UI.syncErr(); UI.toast('Erro: ' + e.message, 'erro'); }
+}
+
+async function excluir(id) {
+  if (!confirm('Excluir este lançamento? (o crédito gerado, se houver, não é removido automaticamente)')) return;
+  UI.syncBusy();
+  const r = await API.remover('fluxo_caixa', id);
+  if (r.ok) { UI.syncOk(); UI.toast('Excluído.', 'ok'); render(); } else { UI.syncErr(); UI.toast('Erro: ' + r.erro, 'erro'); }
+}
+
+/* ============ CSV ============ */
+function exportarCSV() {
+  const list = filtrado();
+  if (!list.length) { UI.toast('Nada para exportar.', 'erro'); return; }
+  const n = v => (+v || 0).toFixed(2).replace('.', ',');
+  const linhas = ['Data;Fluxo;Grupo;Conta Contabil;Detalhamento;Valor;Conta Bancaria'];
+  for (const r of [...list].sort((a, b) => (a.data || '').localeCompare(b.data || '')))
+    linhas.push([r.data, r.fluxo, r.grupo, r.conta_contabil, (r.detalhamento || '').replace(/;/g, ','), n(r.valor), r.conta].join(';'));
+  const blob = new Blob(['\ufeff' + linhas.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'fluxo-caixa.csv'; a.click();
+}
+
+function limpar() { ['fAno', 'fMes', 'fTipo', 'fGrupo', 'fConta'].forEach(id => document.getElementById(id).value = 'todos'); document.getElementById('fBusca').value = ''; render(); }
+
+/* ============ BOOT ============ */
+['fAno', 'fMes', 'fTipo', 'fGrupo', 'fConta'].forEach(id => document.getElementById(id).addEventListener('change', render));
+document.getElementById('fBusca').addEventListener('input', render);
+
+(async () => {
+  API.carregarLocal();
+  UI.syncBusy();
+  try { await API.baixar(); UI.syncOk(); } catch (e) { UI.syncErr(); }
+  preencherFiltros(); render();
+})();
+
+} // fim protegerPagina
+</script>
+</body>
+</html>

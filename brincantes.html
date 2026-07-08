@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brincantes & Escala — Brincar no Quintal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  .fld { width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:.85rem; background:#fff; }
+  .fld:focus { outline:2px solid #1e3a8a33; }
+  .lbl { font-size:.7rem; text-transform:uppercase; letter-spacing:.03em; color:#64748b; font-weight:600; }
+  ::-webkit-scrollbar { height:8px; width:8px; } ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
+  .tab-active { border-bottom:2px solid #1e3a8a; color:#1e3a8a; font-weight:600; }
+</style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800">
+
+<main class="max-w-7xl mx-auto px-4 py-5">
+  <div class="flex gap-1 text-sm mb-4 border-b border-slate-200">
+    <button data-sub="escala" class="px-4 py-2 sub-tab tab-active">📅 Escala & Pagamento</button>
+    <button data-sub="equipe" class="px-4 py-2 sub-tab">🙋 Cadastro de Brincantes</button>
+    <button data-sub="valores" class="px-4 py-2 sub-tab">💵 Tabela de Valores</button>
+  </div>
+
+  <!-- ===== ESCALA ===== -->
+  <section id="sub-escala">
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+      <div class="flex gap-2 items-center flex-wrap">
+        <div><span class="lbl">Ano</span><br><select id="eAno" class="fld !w-24"></select></div>
+        <div><span class="lbl">Mês</span><br><select id="eMes" class="fld !w-32"></select></div>
+        <div><span class="lbl">Status</span><br><select id="eStatus" class="fld !w-36"><option value="todos">Todos</option><option>Pendente</option><option>Pago</option></select></div>
+        <div><span class="lbl">Brincante</span><br><select id="eBrinc" class="fld !w-48"></select></div>
+      </div>
+      <button onclick="abrirEscala()" class="bg-blue-900 text-white text-sm px-4 py-2 rounded hover:bg-blue-800">+ Escalar</button>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+      <article class="bg-white rounded-lg p-4 border border-slate-200"><p class="text-xs text-slate-500">Total escalado</p><p class="text-xl font-bold" id="kTotal">—</p></article>
+      <article class="bg-white rounded-lg p-4 border border-slate-200"><p class="text-xs text-slate-500">Pendente de pagto</p><p class="text-xl font-bold text-amber-700" id="kPend">—</p></article>
+      <article class="bg-white rounded-lg p-4 border border-slate-200"><p class="text-xs text-slate-500">Já pago</p><p class="text-xl font-bold text-emerald-700" id="kPago">—</p></article>
+      <article class="bg-white rounded-lg p-4 border border-slate-200"><p class="text-xs text-slate-500">Diárias</p><p class="text-xl font-bold" id="kDiarias">—</p></article>
+    </div>
+
+    <div class="bg-white rounded-lg border border-slate-200 p-3 mb-3 flex items-center justify-between flex-wrap gap-2">
+      <p class="text-sm text-slate-600">Selecione diárias pendentes e pague em lote — gera uma saída no fluxo de caixa por brincante.</p>
+      <button onclick="pagarSelecionados()" class="bg-emerald-700 text-white text-sm px-4 py-2 rounded hover:bg-emerald-600">💰 Pagar selecionados</button>
+    </div>
+    <div class="bg-white rounded-lg border border-slate-200 overflow-x-auto" id="tabelaEscala"></div>
+  </section>
+
+  <!-- ===== EQUIPE ===== -->
+  <section id="sub-equipe" class="hidden">
+    <div class="flex items-center justify-between mb-4">
+      <input type="text" id="qEquipe" placeholder="🔎 nome…" class="fld !w-64">
+      <button onclick="abrirBrincante(null)" class="bg-blue-900 text-white text-sm px-4 py-2 rounded hover:bg-blue-800">+ Novo brincante</button>
+    </div>
+    <div class="bg-white rounded-lg border border-slate-200 overflow-x-auto" id="tabelaEquipe"></div>
+  </section>
+
+  <!-- ===== VALORES ===== -->
+  <section id="sub-valores" class="hidden">
+    <p class="text-xs text-slate-500 mb-3">Valor pago por função em cada tipo de dia. Editável aqui — usado automaticamente ao escalar.</p>
+    <div class="bg-white rounded-lg border border-slate-200 overflow-x-auto" id="tabelaValores"></div>
+  </section>
+</main>
+
+<script src="shared/api.js"></script>
+<script src="shared/auth.js"></script>
+<script src="shared/ui.js"></script>
+<script>
+if (AUTH.protegerPagina('brincantes')) {
+
+UI.montarHeader('🙋 Brincantes & Escala');
+const FUNCOES = ['Portaria','Limpeza','Brincante','Coordenador do Evento','Recepção'];
+const MESES = { '01':'Jan','02':'Fev','03':'Mar','04':'Abr','05':'Mai','06':'Jun','07':'Jul','08':'Ago','09':'Set','10':'Out','11':'Nov','12':'Dez' };
+let selecionados = new Set();
+
+/* ============ TABELA DE VALORES (param_valores_funcao) ============ */
+// Fallback local se ainda não veio via importação; edições ficam no state.
+function valores() {
+  const v = API.tabela('param_valores_funcao');
+  if (v && v.length) return v;
+  return FUNCOES.map(f => ({ funcao: f, valor_semana_R$: 0, valor_sabado_R$: 0, valor_domingo_R$: 0, valor_feriado_R$: 0 }));
+}
+function feriados() { return API.tabela('param_feriados').map(f => f['data (AAAA-MM-DD)'] || f.data).filter(Boolean); }
+
+function tipoDia(dataISO) {
+  if (feriados().includes(dataISO)) return 'feriado';
+  const dow = new Date(dataISO + 'T12:00:00').getDay();
+  if (dow === 0) return 'domingo';
+  if (dow === 6) return 'sabado';
+  return 'semana';
+}
+function valorDe(funcao, tipo) {
+  const row = valores().find(v => v.funcao === funcao);
+  if (!row) return 0;
+  return +row['valor_' + tipo + '_R$'] || 0;
+}
+
+/* ============ SUB-ABAS ============ */
+document.querySelectorAll('.sub-tab').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.sub-tab').forEach(x => x.classList.remove('tab-active'));
+  b.classList.add('tab-active');
+  ['escala', 'equipe', 'valores'].forEach(s => document.getElementById('sub-' + s).classList.toggle('hidden', s !== b.dataset.sub));
+  if (b.dataset.sub === 'equipe') renderEquipe();
+  if (b.dataset.sub === 'valores') renderValores();
+}));
+
+/* ============ ESCALA ============ */
+function escalasFiltradas() {
+  const ano = document.getElementById('eAno').value, mes = document.getElementById('eMes').value;
+  const st = document.getElementById('eStatus').value, br = document.getElementById('eBrinc').value;
+  return API.tabela('escalas').filter(e => {
+    const a = (e.data || '').slice(0, 4), m = (e.data || '').slice(5, 7);
+    return (ano === 'todos' || a === ano) && (mes === 'todos' || m === mes) &&
+      (st === 'todos' || e.status_pgto === st) && (br === 'todos' || e.cod_brincante === br);
+  });
+}
+
+function preencherFiltrosEscala() {
+  const anos = [...new Set(API.tabela('escalas').map(e => (e.data || '').slice(0, 4)).filter(Boolean))].sort();
+  const brincs = [...API.tabela('brincantes')].sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+  const set = (id, html) => { const s = document.getElementById(id); const v = s.value; s.innerHTML = html; if ([...s.options].some(o => o.value === v)) s.value = v; };
+  set('eAno', '<option value="todos">Todos</option>' + anos.map(a => `<option>${a}</option>`).join(''));
+  set('eMes', '<option value="todos">Todos</option>' + Object.entries(MESES).map(([k, v]) => `<option value="${k}">${v}</option>`).join(''));
+  set('eBrinc', '<option value="todos">Todos</option>' + brincs.map(b => `<option value="${b.cod}">${UI.esc(b.nome)}</option>`).join(''));
+}
+
+function renderEscala() {
+  const list = escalasFiltradas().sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+  const total = list.reduce((s, e) => s + (+e.valor || 0), 0);
+  const pend = list.filter(e => e.status_pgto !== 'Pago');
+  const pago = list.filter(e => e.status_pgto === 'Pago');
+  document.getElementById('kTotal').textContent = UI.fmtBRL(total);
+  document.getElementById('kPend').textContent = UI.fmtBRL(pend.reduce((s, e) => s + (+e.valor || 0), 0));
+  document.getElementById('kPago').textContent = UI.fmtBRL(pago.reduce((s, e) => s + (+e.valor || 0), 0));
+  document.getElementById('kDiarias').textContent = list.length;
+
+  document.getElementById('tabelaEscala').innerHTML = `<table class="w-full text-sm">
+    <thead class="bg-slate-800 text-white text-xs uppercase"><tr>
+      <th class="px-2 py-2"><input type="checkbox" id="chkAll" onchange="toggleAll(this.checked)"></th>
+      <th class="px-3 py-2 text-left">Data</th><th class="px-3 py-2 text-left">Tipo dia</th>
+      <th class="px-3 py-2 text-left">Brincante</th><th class="px-3 py-2 text-left">Função</th>
+      <th class="px-3 py-2 text-left">Evento</th><th class="px-3 py-2 text-right">Valor</th>
+      <th class="px-3 py-2 text-center">Status</th><th class="px-3 py-2"></th></tr></thead><tbody>
+    ${list.length ? list.map(e => `<tr class="border-b border-slate-100 hover:bg-slate-50">
+      <td class="px-2 py-2 text-center">${e.status_pgto !== 'Pago' ? `<input type="checkbox" ${selecionados.has(e.id) ? 'checked' : ''} onchange="toggleSel('${e.id}',this.checked)">` : ''}</td>
+      <td class="px-3 py-2 whitespace-nowrap">${e.data}</td>
+      <td class="px-3 py-2 capitalize">${e.tipo_dia}</td>
+      <td class="px-3 py-2">${UI.esc(e.nome_brincante)}</td>
+      <td class="px-3 py-2">${UI.esc(e.funcao)}</td>
+      <td class="px-3 py-2 text-xs">${UI.esc(e.evento_ref || '—')}</td>
+      <td class="px-3 py-2 text-right font-semibold">${UI.fmtBRL(e.valor)}</td>
+      <td class="px-3 py-2 text-center">${e.status_pgto === 'Pago' ? `<span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">Pago ${e.data_pgto || ''}</span>` : '<span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">Pendente</span>'}</td>
+      <td class="px-3 py-2 text-center">${e.status_pgto !== 'Pago' ? `<button onclick="excluirEscala('${e.id}')" class="text-red-600 text-xs underline">excluir</button>` : ''}</td>
+    </tr>`).join('') : '<tr><td colspan="9" class="p-6 text-center text-slate-400 text-sm">Nenhuma escala no filtro.</td></tr>'}
+    </tbody></table>`;
+}
+
+function toggleSel(id, on) { if (on) selecionados.add(id); else selecionados.delete(id); }
+function toggleAll(on) {
+  selecionados.clear();
+  if (on) escalasFiltradas().filter(e => e.status_pgto !== 'Pago').forEach(e => selecionados.add(e.id));
+  renderEscala();
+}
+
+function abrirEscala() {
+  const brincs = [...API.tabela('brincantes')].filter(b => b.ativo !== 'nao').sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+  if (!brincs.length) { UI.toast('Cadastre um brincante primeiro (aba Cadastro).', 'erro'); return; }
+  UI.modal(`<div class="p-5">
+    <h3 class="font-bold text-lg mb-3">📅 Escalar brincante</h3>
+    <div class="grid grid-cols-6 gap-2">
+      <div class="col-span-2"><span class="lbl">Data</span><input type="date" id="es_data" class="fld" value="${UI.hoje()}" onchange="previewValor()"></div>
+      <div class="col-span-4"><span class="lbl">Brincante</span><select id="es_brinc" class="fld" onchange="ajustaFuncoes()">${brincs.map(b => `<option value="${b.cod}" data-funcoes="${UI.esc(b.funcoes || '')}">${UI.esc(b.nome)}</option>`).join('')}</select></div>
+      <div class="col-span-3"><span class="lbl">Função</span><select id="es_funcao" class="fld" onchange="previewValor()"></select></div>
+      <div class="col-span-3"><span class="lbl">Evento (opcional)</span><input id="es_evento" class="fld" placeholder="ex: Festa João / Colônia"></div>
+    </div>
+    <div class="bg-blue-50 border border-blue-200 rounded p-3 mt-3 text-sm" id="es_preview"></div>
+    <div class="flex justify-end gap-2 mt-4">
+      <button onclick="salvarEscala()" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">💾 Escalar</button>
+    </div></div>`, 'max-w-2xl');
+  ajustaFuncoes();
+}
+function ajustaFuncoes() {
+  const opt = document.getElementById('es_brinc').selectedOptions[0];
+  const fs = (opt.dataset.funcoes || '').split(',').map(x => x.trim()).filter(Boolean);
+  const lista = fs.length ? fs : FUNCOES;
+  document.getElementById('es_funcao').innerHTML = lista.map(f => `<option>${f}</option>`).join('');
+  previewValor();
+}
+function previewValor() {
+  const data = document.getElementById('es_data').value;
+  const funcao = document.getElementById('es_funcao').value;
+  const t = tipoDia(data), v = valorDe(funcao, t);
+  document.getElementById('es_preview').innerHTML = v > 0
+    ? `Dia <b>${data}</b> = <b class="capitalize">${t}</b> · ${funcao} → <b class="text-blue-800">${UI.fmtBRL(v)}</b>`
+    : `<span class="text-red-600">Sem valor cadastrado para ${funcao} em ${t}. Preencha na aba "Tabela de Valores".</span>`;
+}
+async function salvarEscala() {
+  const data = document.getElementById('es_data').value;
+  const opt = document.getElementById('es_brinc').selectedOptions[0];
+  const funcao = document.getElementById('es_funcao').value;
+  const t = tipoDia(data), v = valorDe(funcao, t);
+  const reg = { data, tipo_dia: t, cod_brincante: opt.value, nome_brincante: opt.textContent,
+    funcao, valor: v, evento_ref: document.getElementById('es_evento').value, status_pgto: 'Pendente' };
+  UI.syncBusy();
+  try {
+    const r = await API.upsert('escalas', reg);
+    if (!r.ok) throw new Error(r.erro);
+    UI.fecharModal(); UI.syncOk(); UI.toast('Escalado: ' + UI.fmtBRL(v), 'ok');
+    preencherFiltrosEscala(); renderEscala();
+  } catch (e) { UI.syncErr(); UI.toast('Erro: ' + e.message, 'erro'); }
+}
+async function excluirEscala(id) {
+  if (!confirm('Excluir esta diária?')) return;
+  UI.syncBusy();
+  const r = await API.remover('escalas', id);
+  if (r.ok) { UI.syncOk(); selecionados.delete(id); renderEscala(); } else { UI.syncErr(); UI.toast('Erro: ' + r.erro, 'erro'); }
+}
+
+async function pagarSelecionados() {
+  if (!selecionados.size) { UI.toast('Selecione ao menos uma diária pendente.', 'erro'); return; }
+  const ids = [...selecionados];
+  const total = API.tabela('escalas').filter(e => ids.includes(e.id)).reduce((s, e) => s + (+e.valor || 0), 0);
+  if (!confirm(`Pagar ${ids.length} diária(s), total ${UI.fmtBRL(total)}?\nSerá gerada uma saída no fluxo de caixa por brincante.`)) return;
+  UI.syncBusy();
+  try {
+    const r = await API.pagarEscala(ids);
+    if (!r.ok) throw new Error(r.erro);
+    selecionados.clear();
+    UI.syncOk(); UI.toast('Pago! ' + r.brincantes_pagos + ' lançamento(s) no fluxo.', 'ok');
+    preencherFiltrosEscala(); renderEscala();
+  } catch (e) { UI.syncErr(); UI.toast('Erro: ' + e.message, 'erro'); }
+}
+
+/* ============ EQUIPE (cadastro brincantes) ============ */
+function renderEquipe() {
+  const q = (document.getElementById('qEquipe').value || '').toLowerCase();
+  let lista = [...API.tabela('brincantes')].sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+  if (q) lista = lista.filter(b => (b.nome || '').toLowerCase().includes(q));
+  document.getElementById('tabelaEquipe').innerHTML = `<table class="w-full text-sm">
+    <thead class="bg-slate-800 text-white text-xs uppercase"><tr>
+      <th class="px-3 py-2 text-left">COD</th><th class="px-3 py-2 text-left">Nome</th>
+      <th class="px-3 py-2 text-left">Funções</th><th class="px-3 py-2 text-left">Contato/PIX</th>
+      <th class="px-3 py-2 text-center">Ativo</th><th class="px-3 py-2"></th></tr></thead><tbody>
+    ${lista.length ? lista.map(b => `<tr class="border-b border-slate-100 hover:bg-slate-50">
+      <td class="px-3 py-2 text-xs">${b.cod}</td>
+      <td class="px-3 py-2 font-semibold">${UI.esc(b.nome)}</td>
+      <td class="px-3 py-2 text-xs">${UI.esc(b.funcoes || '—')}</td>
+      <td class="px-3 py-2 text-xs">${UI.esc(b.telefone || '')}${b.pix ? '<br>PIX: ' + UI.esc(b.pix) : ''}</td>
+      <td class="px-3 py-2 text-center">${b.ativo === 'nao' ? '<span class="text-xs bg-slate-200 px-1.5 rounded">não</span>' : '<span class="text-xs bg-green-100 text-green-700 px-1.5 rounded">sim</span>'}</td>
+      <td class="px-3 py-2 text-center"><button onclick="abrirBrincante('${b.cod}')" class="text-blue-800 text-xs underline">editar</button></td>
+    </tr>`).join('') : '<tr><td colspan="6" class="p-6 text-center text-slate-400 text-sm">Nenhum brincante cadastrado.</td></tr>'}
+    </tbody></table>`;
+}
+
+function abrirBrincante(cod) {
+  const b = cod ? API.tabela('brincantes').find(x => x.cod === cod) : { ativo: 'sim' };
+  const fs = (b.funcoes || '').split(',').map(x => x.trim());
+  UI.modal(`<div class="p-5">
+    <h3 class="font-bold text-lg mb-3">${cod ? '✏ Editar' : '➕ Novo'} brincante ${cod ? '<span class="text-xs text-slate-400">' + cod + '</span>' : ''}</h3>
+    <div class="grid grid-cols-6 gap-2">
+      <div class="col-span-4"><span class="lbl">Nome</span><input id="b_nome" class="fld" value="${UI.esc(b.nome || '')}"></div>
+      <div class="col-span-2"><span class="lbl">CPF (opcional)</span><input id="b_cpf" class="fld" value="${UI.esc(b.cpf || '')}"></div>
+      <div class="col-span-2"><span class="lbl">Telefone</span><input id="b_telefone" class="fld" value="${UI.esc(b.telefone || '')}"></div>
+      <div class="col-span-4"><span class="lbl">PIX</span><input id="b_pix" class="fld" value="${UI.esc(b.pix || '')}"></div>
+      <div class="col-span-2"><span class="lbl">Banco</span><input id="b_banco" class="fld" value="${UI.esc(b.banco || '')}"></div>
+      <div class="col-span-2"><span class="lbl">Agência</span><input id="b_agencia" class="fld" value="${UI.esc(b.agencia || '')}"></div>
+      <div class="col-span-2"><span class="lbl">Conta</span><input id="b_conta" class="fld" value="${UI.esc(b.conta || '')}"></div>
+      <div class="col-span-6"><span class="lbl">Funções que exerce</span>
+        <div class="flex gap-3 flex-wrap mt-1">${FUNCOES.map(f => `<label class="text-sm flex items-center gap-1"><input type="checkbox" class="b_func" value="${f}" ${fs.includes(f) ? 'checked' : ''}> ${f}</label>`).join('')}</div></div>
+      <div class="col-span-3"><span class="lbl">Ativo</span><select id="b_ativo" class="fld"><option value="sim" ${b.ativo !== 'nao' ? 'selected' : ''}>Sim</option><option value="nao" ${b.ativo === 'nao' ? 'selected' : ''}>Não</option></select></div>
+      <div class="col-span-6"><span class="lbl">Observações</span><input id="b_observacoes" class="fld" value="${UI.esc(b.observacoes || '')}"></div>
+    </div>
+    <div class="flex justify-end gap-2 mt-4">
+      ${cod ? `<button onclick="excluirBrincante('${cod}')" class="text-red-700 text-sm underline">excluir</button>` : ''}
+      <button onclick="salvarBrincante('${cod || ''}')" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">💾 Salvar</button>
+    </div></div>`, 'max-w-3xl');
+}
+async function salvarBrincante(cod) {
+  const g = k => document.getElementById('b_' + k).value.trim();
+  const funcoes = [...document.querySelectorAll('.b_func:checked')].map(c => c.value).join(',');
+  const reg = { cod: cod || undefined, nome: g('nome'), cpf: g('cpf'), telefone: g('telefone'),
+    pix: g('pix'), banco: g('banco'), agencia: g('agencia'), conta: g('conta'),
+    funcoes, ativo: g('ativo'), observacoes: g('observacoes') };
+  if (!reg.nome) { UI.toast('Informe o nome.', 'erro'); return; }
+  UI.syncBusy();
+  try {
+    const r = await API.upsert('brincantes', reg);
+    if (!r.ok) throw new Error(r.erro);
+    UI.fecharModal(); UI.syncOk(); UI.toast('Brincante salvo.', 'ok');
+    renderEquipe(); preencherFiltrosEscala();
+  } catch (e) { UI.syncErr(); UI.toast('Erro: ' + e.message, 'erro'); }
+}
+async function excluirBrincante(cod) {
+  if (!confirm('Excluir este brincante? (escalas já lançadas permanecem)')) return;
+  UI.syncBusy();
+  const r = await API.remover('brincantes', cod);
+  if (r.ok) { UI.fecharModal(); UI.syncOk(); renderEquipe(); } else { UI.syncErr(); UI.toast('Erro: ' + r.erro, 'erro'); }
+}
+
+/* ============ VALORES (param_valores_funcao) ============ */
+function renderValores() {
+  const v = valores();
+  document.getElementById('tabelaValores').innerHTML = `<table class="w-full text-sm">
+    <thead class="bg-slate-800 text-white text-xs uppercase"><tr>
+      <th class="px-3 py-2 text-left">Função</th><th class="px-3 py-2 text-right">Semana</th>
+      <th class="px-3 py-2 text-right">Sábado</th><th class="px-3 py-2 text-right">Domingo</th>
+      <th class="px-3 py-2 text-right">Feriado</th></tr></thead><tbody>
+    ${FUNCOES.map(f => {
+      const row = v.find(x => x.funcao === f) || { funcao: f };
+      const cel = t => `<td class="px-3 py-1 text-right"><input type="number" step="0.01" class="fld !w-24 !text-right" value="${row['valor_' + t + '_R$'] || ''}" onchange="setValor('${f}','${t}',this.value)"></td>`;
+      return `<tr class="border-b border-slate-100"><td class="px-3 py-2 font-semibold">${f}</td>${cel('semana')}${cel('sabado')}${cel('domingo')}${cel('feriado')}</tr>`;
+    }).join('')}</tbody></table>
+    <p class="text-xs text-slate-500 p-3">As alterações são salvas na nuvem automaticamente e passam a valer nas próximas escalas.</p>`;
+}
+async function setValor(funcao, tipo, valor) {
+  const s = API.get();
+  s.param_valores_funcao = s.param_valores_funcao || valores();
+  let row = s.param_valores_funcao.find(x => x.funcao === funcao);
+  if (!row) { row = { funcao }; s.param_valores_funcao.push(row); }
+  row['valor_' + tipo + '_R$'] = +valor || 0;
+  API.gravarLocal();
+  UI.syncBusy();
+  try { await API.enviar(); UI.syncOk(); } catch (e) { UI.syncErr(); }
+}
+
+/* ============ BOOT ============ */
+['eAno', 'eMes', 'eStatus', 'eBrinc'].forEach(id => document.getElementById(id).addEventListener('change', renderEscala));
+document.getElementById('qEquipe').addEventListener('input', renderEquipe);
+
+(async () => {
+  API.carregarLocal();
+  UI.syncBusy();
+  try { await API.baixar(); UI.syncOk(); } catch (e) { UI.syncErr(); }
+  preencherFiltrosEscala(); renderEscala();
+})();
+
+} // fim protegerPagina
+</script>
+</body>
+</html>
