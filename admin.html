@@ -225,17 +225,10 @@ function renderPrecosFesta() {
 function renderImportar() {
   document.getElementById('sub-importar').innerHTML = `
     <div class="bg-white rounded-lg border border-slate-200 p-5 max-w-2xl">
-      <h3 class="font-bold mb-2">📥 Importar planilha (XLSX)</h3>
-      <p class="text-sm text-slate-600 mb-3">Importe suas bases históricas. O sistema lê as abas e adiciona os registros. Para responsáveis sem nome definido, cria pré-cadastros "Resp. &lt;nome da criança&gt;".</p>
-      <input type="file" id="arquivo" accept=".xlsx,.xls" class="fld mb-3">
-      <div id="previewImport" class="hidden">
-        <p class="lbl">Abas encontradas:</p>
-        <div id="abasList" class="text-sm mb-3"></div>
-        <button onclick="UI.lock(this,()=>executarImport())" class="bg-emerald-700 text-white text-sm px-4 py-2 rounded hover:bg-emerald-600">✔ Importar dados</button>
-      </div>
-      <div id="logImport" class="mt-4 text-xs font-mono bg-slate-50 border border-slate-200 rounded p-3 hidden max-h-60 overflow-y-auto"></div>
+      <h3 class="font-bold mb-2">📥 Importar bases históricas</h3>
+      <p class="text-sm text-slate-600 mb-3">A importação das suas planilhas antigas (Cadastro, Contraturno, Colônia, Fluxo, Festinhas) é feita no importador dedicado, com reconciliação inteligente de nomes e agrupamento de irmãos.</p>
+      <a href="importador.html" class="inline-block bg-emerald-700 text-white text-sm px-5 py-2 rounded hover:bg-emerald-600">Abrir importador dedicado →</a>
     </div>`;
-  document.getElementById('arquivo').addEventListener('change', lerArquivo);
 }
 
 let wbCarregado = null;
