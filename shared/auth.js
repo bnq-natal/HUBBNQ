@@ -1,6 +1,6 @@
 /* ============================================================
    shared/auth.js — Autenticação e sessão (frontend)
-   Guarda o usuário logado e os módulos que ele pode ver.
+   Guarda o usuario logado e os módulos que ele pode ver.
    A permissão REAL é recheada no backend de cada gravação.
    ============================================================= */
 const AUTH = (() => {
@@ -17,7 +17,7 @@ const AUTH = (() => {
     { id: 'admin', nome: 'Administração', ícone: '⚙️', arquivo: 'admin.html' },
   ];
 
-  função usuárioAtual() {
+  função usuarioAtual() {
     try { return JSON.parse(localStorage.getItem(LS_USER)) || null; } catch { return null; }
   }
   function logado() { return !!usuarioAtual(); }
@@ -29,7 +29,7 @@ const AUTH = (() => {
   }
   function logout() { localStorage.removeItem(LS_USER); location.href = 'index.html'; }
 
-  // modos que o usuário pode acessar (admin vê todos)
+  // modos que o usuario pode acessar (admin vê todos)
   função módulosPermitidos() {
     const u = usuarioAtual();
     se (!u) retorne [];
