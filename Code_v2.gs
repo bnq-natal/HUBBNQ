@@ -177,7 +177,6 @@ function upsert(tabela, registro, usuario) {
     if (i >= 0) arr[i] = Object.assign(arr[i], registro); else arr.push(registro);
   }
   gravarEstado(s);
-  gerarAbasLegiveis(s);
   return { ok: true, registro };
 }
 
@@ -187,7 +186,6 @@ function remover(tabela, id, usuario) {
   const chave = (tabela === 'responsaveis' || tabela === 'brincantes') ? 'cod' : 'id';
   s[tabela] = (s[tabela] || []).filter(x => x[chave] !== id);
   gravarEstado(s);
-  gerarAbasLegiveis(s);
   return { ok: true };
 }
 
