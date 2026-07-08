@@ -211,7 +211,7 @@ function abrirLanc(id) {
       <div class="col-span-2"><span class="lbl">CPF p/ nota</span><input id="l_cpfnf" class="fld" value="${UI.esc(r.cpf_nf || '')}"></div>
     </div>
     <div class="flex justify-end gap-2 mt-4">
-      <button onclick="salvarLanc('${id || ''}')" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">💾 Salvar</button>
+      <button onclick="UI.lock(this,()=>salvarLanc('${id || ''}'))" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">💾 Salvar</button>
     </div></div>`, 'max-w-3xl');
 
   atualizaContas(r.conta_contabil);

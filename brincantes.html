@@ -43,7 +43,7 @@
 
     <div class="bg-white rounded-lg border border-slate-200 p-3 mb-3 flex items-center justify-between flex-wrap gap-2">
       <p class="text-sm text-slate-600">Selecione diárias pendentes e pague em lote — gera uma saída no fluxo de caixa por brincante.</p>
-      <button onclick="pagarSelecionados()" class="bg-emerald-700 text-white text-sm px-4 py-2 rounded hover:bg-emerald-600">💰 Pagar selecionados</button>
+      <button onclick="UI.lock(this,()=>pagarSelecionados())" class="bg-emerald-700 text-white text-sm px-4 py-2 rounded hover:bg-emerald-600">💰 Pagar selecionados</button>
     </div>
     <div class="bg-white rounded-lg border border-slate-200 overflow-x-auto" id="tabelaEscala"></div>
   </section>
@@ -177,7 +177,7 @@ function abrirEscala() {
     </div>
     <div class="bg-blue-50 border border-blue-200 rounded p-3 mt-3 text-sm" id="es_preview"></div>
     <div class="flex justify-end gap-2 mt-4">
-      <button onclick="salvarEscala()" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">💾 Escalar</button>
+      <button onclick="UI.lock(this,()=>salvarEscala())" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">💾 Escalar</button>
     </div></div>`, 'max-w-2xl');
   ajustaFuncoes();
 }
@@ -274,7 +274,7 @@ function abrirBrincante(cod) {
     </div>
     <div class="flex justify-end gap-2 mt-4">
       ${cod ? `<button onclick="excluirBrincante('${cod}')" class="text-red-700 text-sm underline">excluir</button>` : ''}
-      <button onclick="salvarBrincante('${cod || ''}')" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">💾 Salvar</button>
+      <button onclick="UI.lock(this,()=>salvarBrincante('${cod || ''}'))" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">💾 Salvar</button>
     </div></div>`, 'max-w-3xl');
 }
 async function salvarBrincante(cod) {

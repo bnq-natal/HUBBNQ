@@ -43,6 +43,8 @@ function doPost(e) {
       case 'delete':      return responder(remover(req.tabela, req.id, req.usuario));
       case 'converter_saldo': return responder(converterSaldo(req.payload, req.usuario));
       case 'pagar_escala':    return responder(pagarEscala(req.ids, req.usuario));
+      case 'save_usuario':    return responder(saveUsuario(req.alvo, req.novaSenha, req.usuario));
+      case 'delete_usuario':  return responder(deleteUsuario(req.login, req.usuario));
       default:            return responder({ ok: false, erro: 'action desconhecida' });
     }
   } catch (err) {
@@ -311,6 +313,33 @@ function escreverAba(ss, nome, cabecalho, linhas) {
   sh.clearContents();
   sh.getRange(1, 1, 1, cabecalho.length).setValues([cabecalho]).setFontWeight('bold');
   if (linhas.length) sh.getRange(2, 1, linhas.length, cabecalho.length).setValues(linhas);
+}
+
+
+/* ============================================================
+   GESTÃO DE USUÁRIOS (via módulo Admin) — só admin
+   ============================================================ */
+function saveUsuario(alvo, novaSenha, usuario) {
+  if (!usuario || usuario.role !== 'admin') return { ok: false, erro: 'só admin' };
+  if (!alvo || !alvo.login) return { ok: false, erro: 'login obrigatório' };
+  const s = lerEstado();
+  let u = s.usuarios.find(x => x.login === alvo.login);
+  if (!u) { u = { login: alvo.login }; s.usuarios.push(u); }
+  u.nome = alvo.nome || u.nome || '';
+  u.role = alvo.role || 'operador';
+  u.modulos = alvo.modulos || '';
+  u.ativo = alvo.ativo || 'sim';
+  if (novaSenha) u.senhaHash = hash(novaSenha);
+  gravarEstado(s);
+  return { ok: true };
+}
+
+function deleteUsuario(login, usuario) {
+  if (!usuario || usuario.role !== 'admin') return { ok: false, erro: 'só admin' };
+  const s = lerEstado();
+  s.usuarios = (s.usuarios || []).filter(x => x.login !== login);
+  gravarEstado(s);
+  return { ok: true };
 }
 
 /* ============================================================

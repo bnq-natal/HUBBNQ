@@ -237,7 +237,7 @@ window.abrirFesta = function(id) {
         ${id ? `<button onclick="registrarSinal('${id}')" class="bg-emerald-700 text-white text-xs px-3 py-2 rounded hover:bg-emerald-600">💰 Registrar pagamento no fluxo</button>` : ''}
         ${id && (f.formato||'').includes('Pé no Chão') ? `<button onclick="gerarBuffet('${id}')" class="bg-amber-600 text-white text-xs px-3 py-2 rounded hover:bg-amber-500">🍔 Pedido de buffet</button>` : ''}
       </div>
-      <button onclick="salvarFesta('${id || ''}')" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">💾 Salvar</button>
+      <button onclick="UI.lock(this,()=>salvarFesta('${id || ''}'))" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">💾 Salvar</button>
     </div>
   </div>`, 'max-w-4xl');
 
@@ -354,7 +354,7 @@ window.registrarSinal = function(id) {
       <div class="col-span-2"><span class="lbl">Valor (R$)</span><input type="number" step="0.01" id="pg_valor" class="fld"></div>
       <div class="col-span-2"><span class="lbl">Data</span><input type="date" id="pg_data" class="fld" value="${UI.hoje()}"></div>
     </div>
-    <div class="text-right mt-4"><button onclick="confirmarPagamento('${id}')" class="bg-emerald-700 text-white text-sm px-5 py-2 rounded">Lançar no fluxo</button></div>
+    <div class="text-right mt-4"><button onclick="UI.lock(this,()=>confirmarPagamento('${id}'))" class="bg-emerald-700 text-white text-sm px-5 py-2 rounded">Lançar no fluxo</button></div>
   </div>`, 'max-w-lg');
   window.pgSugere = function() {
     const t = document.getElementById('pg_tipo').value;

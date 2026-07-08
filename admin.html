@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Administração — Brincar no Quintal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  .fld { width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:.85rem; background:#fff; }
+  .fld:focus { outline:2px solid #1e3a8a33; }
+  .lbl { font-size:.7rem; text-transform:uppercase; letter-spacing:.03em; color:#64748b; font-weight:600; }
+  ::-webkit-scrollbar { height:8px; width:8px; } ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
+  .tab-active { border-bottom:2px solid #1e3a8a; color:#1e3a8a; font-weight:600; }
+</style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800">
+
+<main class="max-w-7xl mx-auto px-4 py-5">
+  <div class="flex gap-1 text-sm mb-4 border-b border-slate-200 overflow-x-auto">
+    <button data-sub="usuarios" class="px-4 py-2 sub-tab tab-active whitespace-nowrap">👥 Usuários</button>
+    <button data-sub="precos-ct" class="px-4 py-2 sub-tab whitespace-nowrap">🎨 Preços Contraturno</button>
+    <button data-sub="precos-col" class="px-4 py-2 sub-tab whitespace-nowrap">🏖️ Preços Colônia</button>
+    <button data-sub="precos-festa" class="px-4 py-2 sub-tab whitespace-nowrap">🎉 Preços Festinhas</button>
+    <button data-sub="importar" class="px-4 py-2 sub-tab whitespace-nowrap">📥 Importar bases</button>
+  </div>
+
+  <section id="sub-usuarios"></section>
+  <section id="sub-precos-ct" class="hidden"></section>
+  <section id="sub-precos-col" class="hidden"></section>
+  <section id="sub-precos-festa" class="hidden"></section>
+  <section id="sub-importar" class="hidden"></section>
+</main>
+
+<script src="shared/api.js"></script>
+<script src="shared/auth.js"></script>
+<script src="shared/ui.js"></script>
+<script>
+if (!API.configurada() || !AUTH.logado()) { location.href = 'index.html'; }
+else if (AUTH.usuarioAtual().role !== 'admin') { alert('Acesso restrito a administradores.'); location.href = 'index.html'; }
+else {
+
+UI.montarHeader('⚙️ Administração');
+const MODULOS_IDS = ['cadastro','fluxo','contraturno','festinha','brincantes','folha','admin'];
+
+/* ============ SUB-ABAS ============ */
+document.querySelectorAll('.sub-tab').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.sub-tab').forEach(x => x.classList.remove('tab-active'));
+  b.classList.add('tab-active');
+  ['usuarios','precos-ct','precos-col','precos-festa','importar'].forEach(s =>
+    document.getElementById('sub-' + s).classList.toggle('hidden', s !== b.dataset.sub));
+  const map = { 'usuarios':renderUsuarios, 'precos-ct':renderPrecosCT, 'precos-col':renderPrecosCol, 'precos-festa':renderPrecosFesta, 'importar':renderImportar };
+  map[b.dataset.sub]();
+}));
+
+/* ============ USUÁRIOS ============ */
+function renderUsuarios() {
+  const users = API.tabela('usuarios');
+  document.getElementById('sub-usuarios').innerHTML = `
+    <div class="flex justify-between items-center mb-3">
+      <p class="text-sm text-slate-600">Usuários do sistema. Marque os módulos que cada um acessa.</p>
+      <button onclick="abrirUsuario(null)" class="bg-blue-900 text-white text-sm px-4 py-2 rounded hover:bg-blue-800">+ Novo usuário</button>
+    </div>
+    <div class="bg-white rounded-lg border border-slate-200 overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-800 text-white text-xs uppercase"><tr>
+          <th class="px-3 py-2 text-left">Login</th><th class="px-3 py-2 text-left">Nome</th>
+          <th class="px-3 py-2 text-left">Papel</th><th class="px-3 py-2 text-left">Módulos</th>
+          <th class="px-3 py-2 text-center">Ativo</th><th class="px-3 py-2"></th></tr></thead><tbody>
+        ${users.length ? users.map(u => `<tr class="border-b border-slate-100">
+          <td class="px-3 py-2 font-semibold">${UI.esc(u.login)}</td>
+          <td class="px-3 py-2">${UI.esc(u.nome || '')}</td>
+          <td class="px-3 py-2"><span class="text-xs bg-${u.role==='admin'?'purple':u.role==='leitor'?'slate':'blue'}-100 text-${u.role==='admin'?'purple':u.role==='leitor'?'slate':'blue'}-700 px-2 py-0.5 rounded">${u.role}</span></td>
+          <td class="px-3 py-2 text-xs">${u.role === 'admin' ? '<i>todos</i>' : UI.esc(u.modulos || '—')}</td>
+          <td class="px-3 py-2 text-center">${u.ativo === 'nao' ? '❌' : '✅'}</td>
+          <td class="px-3 py-2 text-center"><button onclick="abrirUsuario('${u.login}')" class="text-blue-800 text-xs underline">editar</button></td>
+        </tr>`).join('') : '<tr><td colspan="6" class="p-6 text-center text-slate-400">Nenhum usuário.</td></tr>'}
+      </tbody></table>
+    </div>`;
+}
+
+window.abrirUsuario = function(login) {
+  const u = login ? (API.tabela('usuarios').find(x => x.login === login) || {}) : { role: 'operador', ativo: 'sim', modulos: '' };
+  const mods = (u.modulos || '').split(',').map(x => x.trim());
+  UI.modal(`<div class="p-5">
+    <h3 class="font-bold text-lg mb-3">${login ? '✏ Editar' : '➕ Novo'} usuário</h3>
+    <div class="grid grid-cols-6 gap-2">
+      <div class="col-span-3"><span class="lbl">Login</span><input id="u_login" class="fld" value="${UI.esc(u.login || '')}" ${login ? 'readonly' : ''}></div>
+      <div class="col-span-3"><span class="lbl">Nome</span><input id="u_nome" class="fld" value="${UI.esc(u.nome || '')}"></div>
+      <div class="col-span-3"><span class="lbl">Papel</span><select id="u_role" class="fld" onchange="toggleMods()">
+        <option value="operador" ${u.role==='operador'?'selected':''}>Operador (acessa módulos marcados)</option>
+        <option value="leitor" ${u.role==='leitor'?'selected':''}>Leitor (só visualiza)</option>
+        <option value="admin" ${u.role==='admin'?'selected':''}>Admin (acesso total)</option></select></div>
+      <div class="col-span-3"><span class="lbl">Ativo</span><select id="u_ativo" class="fld"><option value="sim" ${u.ativo!=='nao'?'selected':''}>Sim</option><option value="nao" ${u.ativo==='nao'?'selected':''}>Não</option></select></div>
+      <div class="col-span-6" id="modsBox"><span class="lbl">Módulos que acessa</span>
+        <div class="flex gap-3 flex-wrap mt-1">${MODULOS_IDS.map(m => `<label class="text-sm flex items-center gap-1"><input type="checkbox" class="u_mod" value="${m}" ${mods.includes(m)?'checked':''}> ${m}</label>`).join('')}</div></div>
+      <div class="col-span-6 border-t border-slate-200 pt-2"><span class="lbl">${login ? 'Nova senha (deixe vazio p/ manter)' : 'Senha'}</span><input type="password" id="u_senha" class="fld"></div>
+    </div>
+    <div class="flex justify-between items-center mt-4">
+      ${login && login !== AUTH.usuarioAtual().login ? `<button onclick="UI.lock(this,()=>excluirUsuario('${login}'))" class="text-red-700 text-sm underline">excluir</button>` : '<span></span>'}
+      <button onclick="UI.lock(this,()=>salvarUsuario('${login || ''}'))" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">💾 Salvar</button>
+    </div>
+  </div>`, 'max-w-2xl');
+  toggleMods();
+};
+window.toggleMods = function() {
+  document.getElementById('modsBox').style.display = document.getElementById('u_role').value === 'admin' ? 'none' : '';
+};
+window.salvarUsuario = async function(login) {
+  const g = k => document.getElementById('u_' + k).value.trim();
+  const mods = [...document.querySelectorAll('.u_mod:checked')].map(c => c.value).join(',');
+  const reg = { login: g('login'), nome: g('nome'), role: g('role'), ativo: g('ativo'), modulos: mods };
+  if (!reg.login) { UI.toast('Informe o login.', 'erro'); return; }
+  const senha = g('senha');
+  // senha vira hash no backend; aqui mandamos senha "plana" só se preenchida
+  const s = API.get();
+  s.usuarios = s.usuarios || [];
+  const existente = s.usuarios.find(x => x.login === reg.login);
+  if (existente) Object.assign(existente, reg); else s.usuarios.push(reg);
+  const alvo = s.usuarios.find(x => x.login === reg.login);
+  if (senha) alvo._novaSenha = senha; // backend detecta e faz hash
+  API.gravarLocal();
+  UI.syncBusy();
+  try {
+    await enviarComHashSenha(alvo, senha);
+    UI.fecharModal(); UI.syncOk(); UI.toast('Usuário salvo ✔', 'ok'); renderUsuarios();
+  } catch (e) { UI.syncErr(); UI.toast('Erro: ' + e.message, 'erro'); }
+};
+
+// como o backend faz hash no login/criarAdmin, aqui usamos a action save e pedimos hash via campo _novaSenha
+async function enviarComHashSenha(usuario, senha) {
+  const usuarioAtual = AUTH.usuarioAtual();
+  const r = await API.chamar({ action: 'save_usuario', usuario: usuarioAtual, alvo: usuario, novaSenha: senha });
+  if (!r.ok) throw new Error(r.erro || 'falha ao salvar usuário');
+  await API.baixar();
+}
+
+window.excluirUsuario = async function(login) {
+  if (!confirm('Excluir o usuário ' + login + '?')) return;
+  const usuarioAtual = AUTH.usuarioAtual();
+  UI.syncBusy();
+  try {
+    const r = await API.chamar({ action: 'delete_usuario', usuario: usuarioAtual, login });
+    if (!r.ok) throw new Error(r.erro);
+    await API.baixar();
+    UI.fecharModal(); UI.syncOk(); UI.toast('Usuário excluído.', 'ok'); renderUsuarios();
+  } catch (e) { UI.syncErr(); UI.toast('Erro: ' + e.message, 'erro'); }
+}
+
+/* ============ PREÇOS — CONTRATURNO ============ */
+const CT_DEFAULT = [
+  {pacote:'Duni',formato:'Integral',horas:10,valor:167},{pacote:'Tê',formato:'Integral',horas:40,valor:485},
+  {pacote:'Salamê',formato:'Integral',horas:80,valor:947},{pacote:'Minguê',formato:'Integral',horas:120,valor:1190},
+  {pacote:'Sorvete',formato:'Integral',horas:160,valor:1430},{pacote:'Colorê',formato:'Integral',horas:200,valor:1640},
+  {pacote:'Duni',formato:'Almoço+Contraturno',horas:4,valor:75},{pacote:'Tê',formato:'Almoço+Contraturno',horas:16,valor:250},
+  {pacote:'Salamê',formato:'Almoço+Contraturno',horas:32,valor:495},{pacote:'Minguê',formato:'Almoço+Contraturno',horas:48,valor:650},
+  {pacote:'Sorvete',formato:'Almoço+Contraturno',horas:64,valor:780},{pacote:'Colorê',formato:'Almoço+Contraturno',horas:80,valor:890},
+  {pacote:'Uni',formato:'Contraturno',horas:2,valor:40},{pacote:'Duni',formato:'Contraturno',horas:4,valor:65},
+  {pacote:'Tê',formato:'Contraturno',horas:16,valor:230},{pacote:'Salamê',formato:'Contraturno',horas:32,valor:440},
+  {pacote:'Minguê',formato:'Contraturno',horas:48,valor:560},{pacote:'Sorvete',formato:'Contraturno',horas:64,valor:670},
+  {pacote:'Colorê',formato:'Contraturno',horas:80,valor:760},
+];
+function getCT() { const p = API.tabela('param_contraturno'); return (p && p.length) ? p : CT_DEFAULT; }
+function renderPrecosCT() {
+  const dados = getCT();
+  document.getElementById('sub-precos-ct').innerHTML = `
+    <div class="flex justify-between items-center mb-3">
+      <p class="text-sm text-slate-600">Preços dos pacotes de contraturno (3 formatos). Editável — salva na nuvem.</p>
+      <button onclick="UI.lock(this,()=>salvarCT())" class="bg-blue-900 text-white text-sm px-4 py-2 rounded">💾 Salvar preços</button>
+    </div>
+    <div class="bg-white rounded-lg border border-slate-200 overflow-x-auto"><table class="w-full text-sm">
+      <thead class="bg-slate-800 text-white text-xs uppercase"><tr><th class="px-3 py-2 text-left">Pacote</th><th class="px-3 py-2 text-left">Formato</th><th class="px-3 py-2 text-right">Horas</th><th class="px-3 py-2 text-right">Valor R$</th></tr></thead>
+      <tbody>${dados.map((r,i)=>`<tr class="border-b border-slate-100">
+        <td class="px-3 py-1">${r.pacote}</td><td class="px-3 py-1">${r.formato}</td>
+        <td class="px-3 py-1 text-right">${r.horas}</td>
+        <td class="px-3 py-1 text-right"><input type="number" step="0.01" class="fld !w-28 !text-right ct-val" data-i="${i}" value="${r.valor}"></td>
+      </tr>`).join('')}</tbody></table></div>`;
+}
+window.salvarCT = async function() {
+  const dados = getCT().map((r,i)=>({ ...r, valor: +document.querySelector(`.ct-val[data-i="${i}"]`).value || 0 }));
+  const s = API.get(); s.param_contraturno = dados; API.gravarLocal();
+  UI.syncBusy(); try { await API.enviar(); UI.syncOk(); UI.toast('Preços salvos ✔','ok'); } catch(e){ UI.syncErr(); UI.toast('Erro: '+e.message,'erro'); }
+};
+
+/* ============ PREÇOS — COLÔNIA (faixas) ============ */
+const COL_DEFAULT = [{min:1,max:2,valor:95},{min:3,max:4,valor:85},{min:5,max:9,valor:80},{min:10,max:14,valor:75},{min:15,max:999,valor:70}];
+function getCol() { const p = API.tabela('param_colonia'); return (p && p.length) ? p : COL_DEFAULT; }
+function renderPrecosCol() {
+  const dados = getCol();
+  document.getElementById('sub-precos-col').innerHTML = `
+    <div class="flex justify-between items-center mb-3">
+      <p class="text-sm text-slate-600">Preço por turno (4h) escalonado por faixa de quantidade.</p>
+      <button onclick="UI.lock(this,()=>salvarCol())" class="bg-blue-900 text-white text-sm px-4 py-2 rounded">💾 Salvar preços</button>
+    </div>
+    <div class="bg-white rounded-lg border border-slate-200 overflow-x-auto max-w-lg"><table class="w-full text-sm">
+      <thead class="bg-slate-800 text-white text-xs uppercase"><tr><th class="px-3 py-2 text-left">De</th><th class="px-3 py-2 text-left">Até</th><th class="px-3 py-2 text-right">R$/turno</th></tr></thead>
+      <tbody>${dados.map((r,i)=>`<tr class="border-b border-slate-100">
+        <td class="px-3 py-1">${r.min}</td><td class="px-3 py-1">${r.max>=999?'+':r.max}</td>
+        <td class="px-3 py-1 text-right"><input type="number" step="0.01" class="fld !w-28 !text-right col-val" data-i="${i}" value="${r.valor}"></td>
+      </tr>`).join('')}</tbody></table></div>`;
+}
+window.salvarCol = async function() {
+  const dados = getCol().map((r,i)=>({ ...r, valor: +document.querySelector(`.col-val[data-i="${i}"]`).value || 0 }));
+  const s = API.get(); s.param_colonia = dados; API.gravarLocal();
+  UI.syncBusy(); try { await API.enviar(); UI.syncOk(); UI.toast('Preços salvos ✔','ok'); } catch(e){ UI.syncErr(); UI.toast('Erro: '+e.message,'erro'); }
+};
+
+/* ============ PREÇOS — FESTINHAS ============ */
+function renderPrecosFesta() {
+  document.getElementById('sub-precos-festa').innerHTML = `
+    <p class="text-sm text-slate-600 mb-3">Os preços das festinhas (4 formatos) estão pré-carregados no módulo Festinha com os valores dos seus PDFs. A edição em tabela detalhada entra numa próxima versão — por ora, ajustes pontuais podem ser feitos direto no valor total ao criar cada festa.</p>
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm">
+      <p class="font-semibold mb-1">Valores atuais embutidos:</p>
+      <ul class="text-xs text-slate-600 space-y-0.5 list-disc ml-4">
+        <li>Pé no Chão (FDS): 10 a 50 crianças · R$2.797 a R$5.900</li>
+        <li>Pé no Chão (semana): 5 a 15 crianças · R$697 a R$1.997</li>
+        <li>Quintal Todinho Seu: 5 a 50 crianças · R$1.997 a R$4.397</li>
+        <li>Quintal de Casa: até 10/20/30 · R$750/R$950/R$1.200</li>
+        <li>Oficina adicional: R$200 (personalizada R$250)</li>
+      </ul>
+    </div>`;
+}
+
+/* ============ IMPORTAR BASES ============ */
+function renderImportar() {
+  document.getElementById('sub-importar').innerHTML = `
+    <div class="bg-white rounded-lg border border-slate-200 p-5 max-w-2xl">
+      <h3 class="font-bold mb-2">📥 Importar planilha (XLSX)</h3>
+      <p class="text-sm text-slate-600 mb-3">Importe suas bases históricas. O sistema lê as abas e adiciona os registros. Para responsáveis sem nome definido, cria pré-cadastros "Resp. &lt;nome da criança&gt;".</p>
+      <input type="file" id="arquivo" accept=".xlsx,.xls" class="fld mb-3">
+      <div id="previewImport" class="hidden">
+        <p class="lbl">Abas encontradas:</p>
+        <div id="abasList" class="text-sm mb-3"></div>
+        <button onclick="UI.lock(this,()=>executarImport())" class="bg-emerald-700 text-white text-sm px-4 py-2 rounded hover:bg-emerald-600">✔ Importar dados</button>
+      </div>
+      <div id="logImport" class="mt-4 text-xs font-mono bg-slate-50 border border-slate-200 rounded p-3 hidden max-h-60 overflow-y-auto"></div>
+    </div>`;
+  document.getElementById('arquivo').addEventListener('change', lerArquivo);
+}
+
+let wbCarregado = null;
+function lerArquivo(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    wbCarregado = XLSX.read(ev.target.result, { type: 'binary' });
+    const abas = wbCarregado.SheetNames;
+    document.getElementById('abasList').innerHTML = abas.map(a => `<span class="inline-block bg-slate-100 rounded px-2 py-1 mr-1 mb-1">${UI.esc(a)}</span>`).join('');
+    document.getElementById('previewImport').classList.remove('hidden');
+  };
+  reader.readAsBinaryString(file);
+}
+
+window.executarImport = async function() {
+  if (!wbCarregado) { UI.toast('Selecione um arquivo.', 'erro'); return; }
+  const log = document.getElementById('logImport');
+  log.classList.remove('hidden'); log.innerHTML = 'Iniciando importação…<br>';
+  const addLog = m => { log.innerHTML += m + '<br>'; log.scrollTop = log.scrollHeight; };
+
+  const s = API.get();
+  s._seq = s._seq || {};
+  let importados = 0;
+
+  // Mapeamento flexível: procura abas conhecidas
+  const abas = wbCarregado.SheetNames;
+  const achaAba = (nomes) => abas.find(a => nomes.some(n => a.toLowerCase().includes(n)));
+
+  // Exemplo: importar aba de responsáveis/crianças genérica
+  for (const nomeAba of abas) {
+    const rows = XLSX.utils.sheet_to_json(wbCarregado.Sheets[nomeAba]);
+    if (!rows.length) continue;
+    addLog(`Aba "${nomeAba}": ${rows.length} linhas`);
+    // heurística simples: se tem coluna com "nome", trata como pessoas
+    const amostra = rows[0];
+    const temNome = Object.keys(amostra).find(k => k.toLowerCase().includes('nome') || k.toLowerCase().includes('crian'));
+    if (temNome) {
+      for (const row of rows) {
+        const nome = row[temNome];
+        if (!nome) continue;
+        // cria responsável provisório + criança
+        s._seq.responsaveis = (s._seq.responsaveis || 0) + 1;
+        const cod = 'RESP-' + String(s._seq.responsaveis).padStart(4, '0');
+        s.responsaveis.push({ cod, nome: 'Resp. ' + nome, status: 'ativo', _importado: nomeAba });
+        s.criancas.push({ id: UI.uid(), id_crianca: UI.uid(), cod_responsavel: cod, nome: String(nome), status: 'ativo', _importado: nomeAba });
+        importados++;
+      }
+      addLog(`  → ${rows.length} pessoas processadas`);
+    } else {
+      addLog(`  → aba ignorada (sem coluna de nome reconhecível)`);
+    }
+  }
+
+  API.gravarLocal();
+  addLog(`Enviando ${importados} registros para a nuvem…`);
+  try {
+    await API.enviar();
+    addLog('✔ Importação concluída!');
+    UI.toast('Importado: ' + importados + ' registros', 'ok');
+  } catch (e) {
+    addLog('✖ Erro: ' + e.message);
+    UI.toast('Erro ao salvar: ' + e.message, 'erro');
+  }
+};
+
+/* ============ BOOT ============ */
+API.abrirRapido((ok) => { ok ? UI.syncOk() : UI.syncErr(); renderUsuarios(); });
+renderUsuarios();
+
+} // fim
+</script>
+</body>
+</html>

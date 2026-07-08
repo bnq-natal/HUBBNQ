@@ -252,7 +252,7 @@ function abrirFichaResp(cod) {
     ${cod ? '' : '<p class="text-xs text-slate-500 mb-2">O código (RESP-XXXX) é gerado automaticamente. CPF pode ficar vazio.</p>'}
     ${montarForm(CAMPOS_RESP, r)}
     <div class="flex justify-end mt-5">
-      <button onclick="salvarResp('${cod || ''}')" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">💾 Salvar</button>
+      <button onclick="UI.lock(this,()=>salvarResp('${cod || ''}'))" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">💾 Salvar</button>
     </div>
   </div>`, 'max-w-3xl');
 }
@@ -287,7 +287,7 @@ function abrirFichaCrianca(id) {
     ${montarForm(CAMPOS_CRIANCA, c)}
     <div class="flex justify-between items-center mt-5">
       ${id ? `<button onclick="moverCrianca('${id}')" class="text-slate-600 text-xs underline">↔ mover para outro responsável</button>` : '<span></span>'}
-      <button onclick="salvarCrianca('${id || ''}')" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">💾 Salvar</button>
+      <button onclick="UI.lock(this,()=>salvarCrianca('${id || ''}'))" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">💾 Salvar</button>
     </div>
   </div>`, 'max-w-3xl');
 }
@@ -319,7 +319,7 @@ window.moverCrianca = function(id) {
     <h3 class="font-bold mb-2">↔ Mover criança para outro responsável</h3>
     <select id="destinoMover" class="fld mb-4">${resps.map(r => `<option value="${r.cod}" ${r.cod === codSelecionado ? 'disabled' : ''}>${UI.esc(r.nome)} (${r.cod})</option>`).join('')}</select>
     <div class="text-right">
-      <button onclick="confirmarMover('${id}')" class="bg-blue-900 text-white text-sm px-5 py-2 rounded">Mover</button>
+      <button onclick="UI.lock(this,()=>confirmarMover('${id}'))" class="bg-blue-900 text-white text-sm px-5 py-2 rounded">Mover</button>
     </div>
   </div>`, 'max-w-md');
 };
@@ -347,7 +347,7 @@ function abrirMesclar() {
     <span class="lbl">Destino (recebe tudo)</span>
     <select id="mescDestino" class="fld mb-4">${ops}</select>
     <div class="text-right">
-      <button onclick="confirmarMesclar()" class="bg-red-700 text-white text-sm px-5 py-2 rounded hover:bg-red-600">Mesclar</button>
+      <button onclick="UI.lock(this,()=>confirmarMesclar())" class="bg-red-700 text-white text-sm px-5 py-2 rounded hover:bg-red-600">Mesclar</button>
     </div>
   </div>`, 'max-w-md');
 }
