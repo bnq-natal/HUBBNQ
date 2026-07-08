@@ -189,10 +189,11 @@ window.abrirConverter = function() {
   UI.modal(`<div class="p-5">
     <h3 class="font-bold text-lg mb-1">🔄 Converter saldo</h3>
     <p class="text-xs text-slate-500">Responsável: <b>${UI.esc(r.nome)}</b> · CT ${UI.fmtNum(ct)}h · Colônia ${UI.fmtNum(co)} turno(s).</p>${aviso}
+    <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 mt-2">⚠ Só é possível converter <b>Colônia → Contraturno</b>. O contrário não é permitido (regra da tabela de preços). Clientes de contraturno têm 10% de desconto na colônia, mas sem conversão de saldo.</p>
     <div class="grid grid-cols-6 gap-2 mt-3">
-      <div class="col-span-3"><span class="lbl">De (origem)</span><select id="cv_origem" class="fld" onchange="calcConversao()">
-        <option value="Colonia">🏖️ Colônia → 🎨 Contraturno</option>
-        <option value="Contraturno">🎨 Contraturno → 🏖️ Colônia</option></select></div>
+      <div class="col-span-3"><span class="lbl">Conversão permitida</span>
+        <div class="fld bg-slate-50">🏖️ Colônia → 🎨 Contraturno</div>
+        <input type="hidden" id="cv_origem" value="Colonia"></div>
       <div class="col-span-3"><span class="lbl">Qtde a converter (origem)</span><input type="number" step="0.5" id="cv_qtde" class="fld" oninput="calcConversao()" placeholder="ex: 2"></div>
     </div>
     <div class="bg-blue-50 border border-blue-200 rounded p-3 mt-3 text-sm" id="cv_preview">Informe a quantidade.</div>

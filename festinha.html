@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Festinhas — Brincar no Quintal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  .fld { width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:.85rem; background:#fff; }
+  .fld:focus { outline:2px solid #1e3a8a33; }
+  .lbl { font-size:.7rem; text-transform:uppercase; letter-spacing:.03em; color:#64748b; font-weight:600; }
+  ::-webkit-scrollbar { height:8px; width:8px; } ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
+  .tab-active { border-bottom:2px solid #1e3a8a; color:#1e3a8a; font-weight:600; }
+</style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800">
+
+<main class="max-w-7xl mx-auto px-4 py-5">
+  <div class="flex gap-1 text-sm mb-4 border-b border-slate-200">
+    <button data-sub="agenda" class="px-4 py-2 sub-tab tab-active">📅 Agenda & Festas</button>
+    <button data-sub="pipeline" class="px-4 py-2 sub-tab">📋 Pipeline</button>
+  </div>
+
+  <!-- ===== AGENDA ===== -->
+  <section id="sub-agenda">
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+      <div class="flex gap-2 items-center flex-wrap">
+        <div><span class="lbl">Ano</span><br><select id="fAno" class="fld !w-24"></select></div>
+        <div><span class="lbl">Mês</span><br><select id="fMes" class="fld !w-32"></select></div>
+        <div><span class="lbl">Status</span><br><select id="fStatus" class="fld !w-36"><option value="todos">Todos</option><option>Reserva</option><option>Pagando</option><option>Pago 100%</option><option>Realizada</option><option>Cancelada</option></select></div>
+      </div>
+      <button onclick="abrirFesta(null)" class="bg-blue-900 text-white text-sm px-4 py-2 rounded hover:bg-blue-800">+ Nova festa</button>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+      <article class="bg-white rounded-lg p-3 border border-slate-200"><p class="text-xs text-slate-500">Festas</p><p class="text-lg font-bold" id="kTotal">—</p></article>
+      <article class="bg-white rounded-lg p-3 border border-slate-200"><p class="text-xs text-slate-500">Reservas</p><p class="text-lg font-bold text-amber-700" id="kReserva">—</p></article>
+      <article class="bg-white rounded-lg p-3 border border-slate-200"><p class="text-xs text-slate-500">Faturamento</p><p class="text-lg font-bold text-emerald-700" id="kFat">—</p></article>
+      <article class="bg-white rounded-lg p-3 border border-slate-200"><p class="text-xs text-slate-500">A receber</p><p class="text-lg font-bold text-red-700" id="kReceber">—</p></article>
+      <article class="bg-white rounded-lg p-3 border border-slate-200"><p class="text-xs text-slate-500">Realizadas</p><p class="text-lg font-bold" id="kReal">—</p></article>
+    </div>
+
+    <div class="bg-white rounded-lg border border-slate-200 overflow-x-auto" id="tabelaFestas"></div>
+  </section>
+
+  <!-- ===== PIPELINE ===== -->
+  <section id="sub-pipeline" class="hidden">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-3" id="pipeline"></div>
+  </section>
+</main>
+
+<script src="shared/api.js"></script>
+<script src="shared/auth.js"></script>
+<script src="shared/ui.js"></script>
+<script>
+if (!API.configurada() || !AUTH.logado()) { location.href = 'index.html'; }
+else {
+
+UI.montarHeader('🎉 Festinhas');
+const MESES = { '01':'Jan','02':'Fev','03':'Mar','04':'Abr','05':'Mai','06':'Jun','07':'Jul','08':'Ago','09':'Set','10':'Out','11':'Nov','12':'Dez' };
+const TURNOS = ['Manhã','Tarde'];
+const STATUS_COR = { 'Reserva':'amber', 'Pagando':'blue', 'Pago 100%':'emerald', 'Realizada':'slate', 'Cancelada':'red' };
+
+// Tabelas de preço (fallback embutido = valores reais dos PDFs; podem vir do state via Admin)
+const PRECOS = {
+  formatos: ['Pé no Chão (FDS)','Pé no Chão (semana)','Quintal Todinho Seu','Quintal de Casa'],
+  'Pé no Chão (FDS)': [
+    {criancas:10,adultos:5,valor:2797,hora_add:250},{criancas:15,adultos:10,valor:3197,hora_add:300},
+    {criancas:20,adultos:10,valor:3697,hora_add:350},{criancas:25,adultos:15,valor:3997,hora_add:400},
+    {criancas:30,adultos:15,valor:4297,hora_add:450},{criancas:40,adultos:20,valor:4900,hora_add:500},
+    {criancas:50,adultos:25,valor:5900,hora_add:600}],
+  'Pé no Chão (semana)': [
+    {criancas:5,adultos:5,valor:697,hora_add:250},{criancas:10,adultos:5,valor:1297,hora_add:300},
+    {criancas:15,adultos:5,valor:1997,hora_add:350}],
+  'Quintal Todinho Seu': [
+    {criancas:5,adultos:15,valor:1997,hora_add:350},{criancas:10,adultos:20,valor:2197,hora_add:450},
+    {criancas:15,adultos:30,valor:2597,hora_add:500},{criancas:20,adultos:35,valor:2897,hora_add:600},
+    {criancas:25,adultos:35,valor:3049,hora_add:750},{criancas:30,adultos:35,valor:3149,hora_add:750},
+    {criancas:40,adultos:35,valor:3547,hora_add:750},{criancas:50,adultos:35,valor:4397,hora_add:750}],
+  'Quintal de Casa': [
+    {criancas:10,adultos:0,valor:750,hora_add:100,brincantes:2},
+    {criancas:20,adultos:0,valor:950,hora_add:100,brincantes:3},
+    {criancas:30,adultos:0,valor:1200,hora_add:100,brincantes:4}],
+  oficinas: ['Oficina de música','Oficina de teatro','Caça ao tesouro','Slime','Baladinha','Pocket Show','Oficina personalizada'],
+  incluso: 'Modelo inclui 1 oficina + 1 atividade. Oficina adicional: R$200 (personalizada a partir de R$250).',
+};
+function precosFormato(fmt) {
+  // permite override futuro via param no state
+  const p = API.tabela('param_festas');
+  const custom = p && p.length ? p.filter(x => x.formato === fmt) : null;
+  if (custom && custom.length) return custom.map(x => ({ criancas:+x.criancas, adultos:+x.adultos, valor:+x.valor, hora_add:+x.hora_add, brincantes:+x.brincantes||0 }));
+  return PRECOS[fmt] || [];
+}
+
+/* ============ SUB-ABAS ============ */
+document.querySelectorAll('.sub-tab').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.sub-tab').forEach(x => x.classList.remove('tab-active'));
+  b.classList.add('tab-active');
+  ['agenda','pipeline'].forEach(s => document.getElementById('sub-' + s).classList.toggle('hidden', s !== b.dataset.sub));
+  if (b.dataset.sub === 'pipeline') renderPipeline();
+}));
+
+/* ============ AGENDA ============ */
+function festasFiltradas() {
+  const ano = document.getElementById('fAno').value, mes = document.getElementById('fMes').value, st = document.getElementById('fStatus').value;
+  return API.tabela('festinhas').filter(f => {
+    const a = (f.data_festa || '').slice(0, 4), m = (f.data_festa || '').slice(5, 7);
+    return (ano === 'todos' || a === ano) && (mes === 'todos' || m === mes) && (st === 'todos' || f.status === st);
+  });
+}
+function preencherFiltros() {
+  const anos = [...new Set(API.tabela('festinhas').map(f => (f.data_festa || '').slice(0, 4)).filter(Boolean))].sort();
+  const set = (id, html) => { const s = document.getElementById(id); const v = s.value; s.innerHTML = html; if ([...s.options].some(o => o.value === v)) s.value = v; };
+  set('fAno', '<option value="todos">Todos</option>' + anos.map(a => `<option>${a}</option>`).join(''));
+  set('fMes', '<option value="todos">Todos</option>' + Object.entries(MESES).map(([k, v]) => `<option value="${k}">${v}</option>`).join(''));
+}
+
+function render() {
+  const list = festasFiltradas().sort((a, b) => (a.data_festa || '').localeCompare(b.data_festa || ''));
+  const fat = list.reduce((s, f) => s + (+f.valor_total || 0), 0);
+  const pago = list.reduce((s, f) => s + (+f.valor_pago || 0), 0);
+  document.getElementById('kTotal').textContent = list.length;
+  document.getElementById('kReserva').textContent = list.filter(f => f.status === 'Reserva').length;
+  document.getElementById('kFat').textContent = UI.fmtBRL(fat);
+  document.getElementById('kReceber').textContent = UI.fmtBRL(fat - pago);
+  document.getElementById('kReal').textContent = list.filter(f => f.status === 'Realizada').length;
+
+  document.getElementById('tabelaFestas').innerHTML = `<table class="w-full text-sm">
+    <thead class="bg-slate-800 text-white text-xs uppercase"><tr>
+      <th class="px-3 py-2 text-left">Data / Turno</th><th class="px-3 py-2 text-left">Aniversariante</th>
+      <th class="px-3 py-2 text-left">Responsável</th><th class="px-3 py-2 text-left">Formato</th>
+      <th class="px-3 py-2 text-center">Crianças</th><th class="px-3 py-2 text-right">Total</th>
+      <th class="px-3 py-2 text-right">Pago</th><th class="px-3 py-2 text-center">Status</th><th class="px-3 py-2"></th></tr></thead><tbody>
+    ${list.length ? list.map(f => {
+      const resp = API.tabela('responsaveis').find(x => x.cod === f.cod_responsavel);
+      const cor = STATUS_COR[f.status] || 'slate';
+      return `<tr class="border-b border-slate-100 hover:bg-slate-50">
+        <td class="px-3 py-2 whitespace-nowrap">${f.data_festa || ''}<br><span class="text-xs text-slate-500">${f.turno || ''}</span></td>
+        <td class="px-3 py-2 font-semibold">${UI.esc(f.aniversariante || '')}<br><span class="text-xs text-slate-400">${f.idade ? f.idade + ' anos' : ''}</span></td>
+        <td class="px-3 py-2 text-xs">${resp ? UI.esc(resp.nome) : '—'}</td>
+        <td class="px-3 py-2 text-xs">${UI.esc(f.formato || '')}</td>
+        <td class="px-3 py-2 text-center">${f.qtd_criancas || ''}</td>
+        <td class="px-3 py-2 text-right font-semibold">${UI.fmtBRL(f.valor_total)}</td>
+        <td class="px-3 py-2 text-right ${(+f.valor_pago||0) >= (+f.valor_total||0) ? 'text-emerald-700' : 'text-amber-700'}">${UI.fmtBRL(f.valor_pago)}</td>
+        <td class="px-3 py-2 text-center"><span class="text-xs bg-${cor}-100 text-${cor}-700 px-2 py-0.5 rounded">${f.status}</span></td>
+        <td class="px-3 py-2 text-center whitespace-nowrap">
+          <button onclick="abrirFesta('${f.id}')" class="text-blue-800 text-xs underline">abrir</button>
+        </td></tr>`;
+    }).join('') : '<tr><td colspan="9" class="p-6 text-center text-slate-400 text-sm">Nenhuma festa no filtro.</td></tr>'}
+    </tbody></table>`;
+}
+
+/* ============ PIPELINE ============ */
+function renderPipeline() {
+  const cols = ['Reserva','Pagando','Pago 100%','Realizada'];
+  const todas = API.tabela('festinhas');
+  document.getElementById('pipeline').innerHTML = cols.map(st => {
+    const fs = todas.filter(f => f.status === st).sort((a, b) => (a.data_festa || '').localeCompare(b.data_festa || ''));
+    const cor = STATUS_COR[st];
+    return `<div class="bg-white rounded-lg border border-slate-200 p-3">
+      <h3 class="font-semibold text-sm mb-2 text-${cor}-700">${st} (${fs.length})</h3>
+      ${fs.map(f => `<div onclick="abrirFesta('${f.id}')" class="border border-slate-200 rounded p-2 mb-2 cursor-pointer hover:bg-slate-50">
+        <p class="font-semibold text-sm">${UI.esc(f.aniversariante || '')}</p>
+        <p class="text-xs text-slate-500">${f.data_festa || ''} · ${f.turno || ''}</p>
+        <p class="text-xs text-slate-500">${UI.esc(f.formato || '')}</p>
+        <p class="text-xs font-semibold text-blue-800 mt-1">${UI.fmtBRL(f.valor_total)} · pago ${UI.fmtBRL(f.valor_pago)}</p>
+      </div>`).join('') || '<p class="text-xs text-slate-400">vazio</p>'}
+    </div>`;
+  }).join('');
+}
+
+/* ============ NOVA/EDITAR FESTA ============ */
+let acResp = null;
+window.abrirFesta = function(id) {
+  const f = id ? (API.tabela('festinhas').find(x => x.id === id) || {}) : { status: 'Reserva', turno: 'Manhã', formato: 'Pé no Chão (FDS)', valor_pago: 0 };
+  const resp = f.cod_responsavel ? API.tabela('responsaveis').find(x => x.cod === f.cod_responsavel) : null;
+  UI.modal(`<div class="p-5">
+    <div class="flex justify-between items-center mb-3">
+      <h3 class="font-bold text-lg">${id ? '✏ Festa' : '➕ Nova festa'}</h3>
+      <button onclick="UI.fecharModal()" class="text-slate-400 hover:text-slate-700 text-xl">&times;</button>
+    </div>
+
+    <p class="lbl border-b border-slate-200 pb-1 mb-2">Responsável (exige cadastro — CPF e endereço para NF)</p>
+    <div id="respBox">
+      ${resp ? `<div class="bg-slate-50 border border-slate-200 rounded p-2 text-sm">
+        <b>${UI.esc(resp.nome)}</b> (${resp.cod}) · CPF: ${resp.cpf || '<span class="text-red-600">faltando</span>'} · ${resp.telefone || ''}
+        <button onclick="trocarResp()" class="text-blue-800 text-xs underline ml-2">trocar</button></div>`
+      : `<div id="respAc"></div>`}
+    </div>
+    <input type="hidden" id="f_cod_responsavel" value="${f.cod_responsavel || ''}">
+
+    <p class="lbl border-b border-slate-200 pb-1 mb-2 mt-4">Dados da festa</p>
+    <div class="grid grid-cols-6 gap-2">
+      <div class="col-span-3"><span class="lbl">Aniversariante</span><input id="f_aniversariante" class="fld" value="${UI.esc(f.aniversariante || '')}"></div>
+      <div class="col-span-1"><span class="lbl">Idade</span><input type="number" id="f_idade" class="fld" value="${f.idade || ''}"></div>
+      <div class="col-span-2"><span class="lbl">Tema</span><input id="f_tema" class="fld" value="${UI.esc(f.tema || '')}"></div>
+      <div class="col-span-2"><span class="lbl">Data</span><input type="date" id="f_data_festa" class="fld" value="${f.data_festa || ''}" onchange="checarConflito()"></div>
+      <div class="col-span-2"><span class="lbl">Turno</span><select id="f_turno" class="fld" onchange="checarConflito()">${TURNOS.map(t => `<option ${t === f.turno ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+      <div class="col-span-2"><span class="lbl">Horário</span><input id="f_horario" class="fld" value="${UI.esc(f.horario || '')}" placeholder="ex: 15h-18h"></div>
+      <div class="col-span-6"><p id="conflito" class="text-xs"></p></div>
+    </div>
+
+    <p class="lbl border-b border-slate-200 pb-1 mb-2 mt-4">Formato & valor</p>
+    <div class="grid grid-cols-6 gap-2">
+      <div class="col-span-3"><span class="lbl">Formato</span><select id="f_formato" class="fld" onchange="carregarTamanhos()">${PRECOS.formatos.map(fm => `<option ${fm === f.formato ? 'selected' : ''}>${fm}</option>`).join('')}</select></div>
+      <div class="col-span-3"><span class="lbl">Tamanho (nº crianças)</span><select id="f_tamanho" class="fld" onchange="preencheValores()"></select></div>
+      <div class="col-span-2"><span class="lbl">Qtd crianças</span><input type="number" id="f_qtd_criancas" class="fld" value="${f.qtd_criancas || ''}"></div>
+      <div class="col-span-2"><span class="lbl">Qtd adultos</span><input type="number" id="f_qtd_adultos" class="fld" value="${f.qtd_adultos || ''}"></div>
+      <div class="col-span-2"><span class="lbl">Hora adicional?</span><select id="f_hora_add" class="fld" onchange="calcTotal()"><option value="0">Não</option><option value="1" ${f.hora_add ? 'selected' : ''}>Sim (+1h)</option></select></div>
+    </div>
+
+    <p class="lbl border-b border-slate-200 pb-1 mb-2 mt-4">Oficinas / extras</p>
+    <div class="grid grid-cols-6 gap-2">
+      <div class="col-span-4"><span class="lbl">Oficina adicional (R$200 / personalizada R$250)</span>
+        <select id="f_oficina" class="fld" onchange="calcTotal()"><option value="">Nenhuma (1 já inclusa)</option>${PRECOS.oficinas.map(o => `<option ${o === f.oficina_extra ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
+      <div class="col-span-2"><span class="lbl">Valor extras (R$)</span><input type="number" step="0.01" id="f_extras" class="fld" value="${f.valor_extras || 0}" onchange="calcTotal()"></div>
+    </div>
+    <p class="text-xs text-slate-500 mt-1">${PRECOS.incluso}</p>
+
+    <div class="bg-blue-50 border border-blue-200 rounded p-3 mt-3">
+      <div class="grid grid-cols-3 gap-2 text-sm">
+        <div><span class="lbl">Valor total</span><input type="number" step="0.01" id="f_valor_total" class="fld font-bold" value="${f.valor_total || 0}"></div>
+        <div><span class="lbl">Sinal 30%</span><p class="font-bold text-lg" id="sinalCalc">—</p></div>
+        <div><span class="lbl">Saldo 70% (até 7d antes)</span><p class="font-bold text-lg" id="saldoCalc">—</p></div>
+      </div>
+    </div>
+
+    <p class="lbl border-b border-slate-200 pb-1 mb-2 mt-4">Pagamentos</p>
+    <div class="grid grid-cols-6 gap-2">
+      <div class="col-span-2"><span class="lbl">Já pago (R$)</span><input type="number" step="0.01" id="f_valor_pago" class="fld" value="${f.valor_pago || 0}"></div>
+      <div class="col-span-2"><span class="lbl">Status</span><select id="f_status" class="fld">${['Reserva','Pagando','Pago 100%','Realizada','Cancelada'].map(s => `<option ${s === f.status ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
+      <div class="col-span-2"><span class="lbl">Forma pagto</span><select id="f_forma" class="fld"><option value="">—</option><option>PIX/Dinheiro (5% desc)</option><option>Cartão</option><option>Transferência</option></select></div>
+    </div>
+
+    <div class="flex justify-between items-center mt-5">
+      <div class="flex gap-2">
+        ${id ? `<button onclick="registrarSinal('${id}')" class="bg-emerald-700 text-white text-xs px-3 py-2 rounded hover:bg-emerald-600">💰 Registrar pagamento no fluxo</button>` : ''}
+        ${id && (f.formato||'').includes('Pé no Chão') ? `<button onclick="gerarBuffet('${id}')" class="bg-amber-600 text-white text-xs px-3 py-2 rounded hover:bg-amber-500">🍔 Pedido de buffet</button>` : ''}
+      </div>
+      <button onclick="salvarFesta('${id || ''}')" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">💾 Salvar</button>
+    </div>
+  </div>`, 'max-w-4xl');
+
+  if (!resp) montarBuscaResp();
+  carregarTamanhos(f.tamanho_sel);
+  calcTotal();
+};
+
+function montarBuscaResp() {
+  const box = document.getElementById('respAc');
+  if (!box) return;
+  const resps = [...API.tabela('responsaveis')].sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+  acResp = UI.autocomplete(box, resps, {
+    placeholder: 'buscar responsável por nome ou COD…',
+    label: r => r.nome, sub: r => r.cod + (r.cpf ? ' · ' + r.cpf : ' · SEM CPF'),
+    onPick: r => {
+      document.getElementById('f_cod_responsavel').value = r.cod;
+      if (!r.cpf || !r.logradouro) avisarDadosNF(r);
+    }
+  });
+}
+window.trocarResp = function() {
+  document.getElementById('respBox').innerHTML = '<div id="respAc"></div>';
+  document.getElementById('f_cod_responsavel').value = '';
+  montarBuscaResp();
+};
+function avisarDadosNF(r) {
+  const falta = [];
+  if (!r.cpf) falta.push('CPF');
+  if (!r.logradouro) falta.push('endereço');
+  if (falta.length) UI.toast('⚠ Responsável sem ' + falta.join(' e ') + ' — necessário para NF. Complete no Cadastro.', 'erro');
+}
+
+window.checarConflito = function() {
+  const data = document.getElementById('f_data_festa').value;
+  const turno = document.getElementById('f_turno').value;
+  const el = document.getElementById('conflito');
+  if (!data) { el.textContent = ''; return; }
+  const conflito = API.tabela('festinhas').find(f => f.data_festa === data && f.turno === turno && f.status !== 'Cancelada');
+  if (conflito) el.innerHTML = `<span class="text-red-600">⚠ Já existe festa nesse dia/turno: ${UI.esc(conflito.aniversariante)}. Só 1 festa por turno.</span>`;
+  else el.innerHTML = `<span class="text-emerald-600">✔ Horário livre.</span>`;
+};
+
+window.carregarTamanhos = function(sel) {
+  const fmt = document.getElementById('f_formato').value;
+  const tams = precosFormato(fmt);
+  document.getElementById('f_tamanho').innerHTML = tams.map((t, i) =>
+    `<option value="${i}" ${String(i) === String(sel) ? 'selected' : ''}>${t.criancas} crianças · ${UI.fmtBRL(t.valor)}</option>`).join('');
+  preencheValores();
+};
+window.preencheValores = function() {
+  const fmt = document.getElementById('f_formato').value;
+  const i = +document.getElementById('f_tamanho').value;
+  const t = precosFormato(fmt)[i];
+  if (t) {
+    document.getElementById('f_qtd_criancas').value = t.criancas;
+    document.getElementById('f_qtd_adultos').value = t.adultos || 0;
+  }
+  calcTotal();
+};
+window.calcTotal = function() {
+  const fmt = document.getElementById('f_formato').value;
+  const i = +document.getElementById('f_tamanho').value;
+  const t = precosFormato(fmt)[i];
+  if (!t) return;
+  let total = +t.valor;
+  if (document.getElementById('f_hora_add').value === '1') total += +t.hora_add || 0;
+  const oficina = document.getElementById('f_oficina').value;
+  if (oficina) total += oficina.includes('personalizada') ? 250 : (oficina === 'Pocket Show' ? 0 : 200);
+  total += +document.getElementById('f_extras').value || 0;
+  document.getElementById('f_valor_total').value = total.toFixed(2);
+  document.getElementById('sinalCalc').textContent = UI.fmtBRL(total * 0.30);
+  document.getElementById('saldoCalc').textContent = UI.fmtBRL(total * 0.70);
+};
+
+window.salvarFesta = async function(id) {
+  const g = k => document.getElementById('f_' + k)?.value;
+  const cod = g('cod_responsavel');
+  if (!cod) { UI.toast('Selecione um responsável (obrigatório).', 'erro'); return; }
+  const data = g('data_festa');
+  // trava de conflito
+  const conflito = API.tabela('festinhas').find(f => f.data_festa === data && f.turno === g('turno') && f.status !== 'Cancelada' && f.id !== id);
+  if (conflito) { UI.toast('Conflito: já há festa nesse dia/turno.', 'erro'); return; }
+
+  const reg = {
+    id: id || undefined, cod_responsavel: cod,
+    aniversariante: g('aniversariante'), idade: +g('idade') || '', tema: g('tema'),
+    data_festa: data, turno: g('turno'), horario: g('horario'),
+    formato: g('formato'), tamanho_sel: g('tamanho'),
+    qtd_criancas: +g('qtd_criancas') || 0, qtd_adultos: +g('qtd_adultos') || 0,
+    hora_add: g('hora_add') === '1', oficina_extra: g('oficina'),
+    valor_extras: +g('extras') || 0, valor_total: +g('valor_total') || 0,
+    valor_pago: +g('valor_pago') || 0, status: g('status'), forma_pagto: g('forma'),
+  };
+  UI.syncBusy();
+  try {
+    const r = await API.upsert('festinhas', reg);
+    if (!r.ok) throw new Error(r.erro);
+    UI.fecharModal(); UI.syncOk(); UI.toast('Festa salva ✔', 'ok');
+    preencherFiltros(); render();
+  } catch (e) { UI.syncErr(); UI.toast('Erro: ' + e.message, 'erro'); }
+};
+
+/* ============ REGISTRAR PAGAMENTO NO FLUXO ============ */
+window.registrarSinal = function(id) {
+  const f = API.tabela('festinhas').find(x => x.id === id);
+  const restante = (+f.valor_total || 0) - (+f.valor_pago || 0);
+  UI.modal(`<div class="p-5">
+    <h3 class="font-bold text-lg mb-2">💰 Registrar pagamento</h3>
+    <p class="text-xs text-slate-500 mb-3">Festa de <b>${UI.esc(f.aniversariante)}</b> · Total ${UI.fmtBRL(f.valor_total)} · Pago ${UI.fmtBRL(f.valor_pago)} · Falta ${UI.fmtBRL(restante)}</p>
+    <div class="grid grid-cols-6 gap-2">
+      <div class="col-span-2"><span class="lbl">Tipo</span><select id="pg_tipo" class="fld" onchange="pgSugere()">
+        <option value="sinal">Sinal (30%)</option><option value="saldo">Saldo (70%)</option><option value="parcial">Parcial</option></select></div>
+      <div class="col-span-2"><span class="lbl">Valor (R$)</span><input type="number" step="0.01" id="pg_valor" class="fld"></div>
+      <div class="col-span-2"><span class="lbl">Data</span><input type="date" id="pg_data" class="fld" value="${UI.hoje()}"></div>
+    </div>
+    <div class="text-right mt-4"><button onclick="confirmarPagamento('${id}')" class="bg-emerald-700 text-white text-sm px-5 py-2 rounded">Lançar no fluxo</button></div>
+  </div>`, 'max-w-lg');
+  window.pgSugere = function() {
+    const t = document.getElementById('pg_tipo').value;
+    const v = t === 'sinal' ? f.valor_total * 0.30 : t === 'saldo' ? f.valor_total * 0.70 : restante;
+    document.getElementById('pg_valor').value = v.toFixed(2);
+  };
+  pgSugere();
+};
+window.confirmarPagamento = async function(id) {
+  const f = API.tabela('festinhas').find(x => x.id === id);
+  const valor = +document.getElementById('pg_valor').value;
+  const data = document.getElementById('pg_data').value;
+  if (!valor || valor <= 0) { UI.toast('Informe o valor.', 'erro'); return; }
+  UI.syncBusy();
+  try {
+    // 1. lança entrada no fluxo
+    const lanc = { data, mes: +data.slice(5,7), ano: +data.slice(0,4), fluxo: 'Entrada',
+      grupo: 'Festinha', conta_contabil: 'Buffet Festinhas', cod_responsavel: f.cod_responsavel,
+      detalhamento: 'Festa ' + f.aniversariante + ' (' + document.getElementById('pg_tipo').value + ')', valor };
+    const rf = await API.upsert('fluxo_caixa', lanc);
+    if (!rf.ok) throw new Error(rf.erro);
+    // 2. atualiza pago + status da festa
+    const novoPago = (+f.valor_pago || 0) + valor;
+    f.valor_pago = novoPago;
+    f.status = novoPago >= (+f.valor_total || 0) ? 'Pago 100%' : 'Pagando';
+    f.id = id;
+    const rff = await API.upsert('festinhas', f);
+    if (!rff.ok) throw new Error(rff.erro);
+    UI.fecharModal(); UI.syncOk(); UI.toast('Pagamento lançado ✔ Status: ' + f.status, 'ok');
+    preencherFiltros(); render();
+  } catch (e) { UI.syncErr(); UI.toast('Erro: ' + e.message, 'erro'); }
+};
+
+/* ============ PEDIDO DE BUFFET ============ */
+window.gerarBuffet = function(id) {
+  const f = API.tabela('festinhas').find(x => x.id === id);
+  const resp = API.tabela('responsaveis').find(x => x.cod === f.cod_responsavel) || {};
+  const KIT_INF = '6 Salgados · 1 Mini pizza · 1 Cachorro quente · 1 Garrafinha de suco';
+  const KIT_ADU = '6 Salgados · 2 Mini pizza · 1 Cachorro quente · 1 Pão de queijo · Suco';
+  const html = `
+    <div style="font-family:sans-serif;padding:24px;max-width:700px">
+      <h2 style="margin:0">🍔 Pedido de Buffet — Brincar no Quintal</h2>
+      <p style="color:#64748b;font-size:13px">Emitido em ${new Date().toLocaleDateString('pt-BR')}</p>
+      <hr>
+      <table style="width:100%;font-size:14px;line-height:1.8">
+        <tr><td><b>Festa de:</b></td><td>${UI.esc(f.aniversariante)} (${f.idade || '?'} anos)</td></tr>
+        <tr><td><b>Data / Turno:</b></td><td>${f.data_festa} · ${f.turno} · ${f.horario || ''}</td></tr>
+        <tr><td><b>Formato:</b></td><td>${f.formato}</td></tr>
+        <tr><td><b>Responsável:</b></td><td>${UI.esc(resp.nome || '')} · ${resp.telefone || ''}</td></tr>
+        <tr><td><b>Nº crianças:</b></td><td>${f.qtd_criancas}</td></tr>
+        <tr><td><b>Nº adultos:</b></td><td>${f.qtd_adultos}</td></tr>
+      </table>
+      <h3 style="margin-bottom:4px">Kit Infantil (× ${f.qtd_criancas})</h3>
+      <p style="font-size:13px;color:#334155">${KIT_INF}</p>
+      <h3 style="margin-bottom:4px">Kit Adulto (× ${f.qtd_adultos})</h3>
+      <p style="font-size:13px;color:#334155">${KIT_ADU}</p>
+      <hr>
+      <p style="font-size:12px;color:#94a3b8">Observações: ${UI.esc(f.tema ? 'Tema: ' + f.tema : '')}</p>
+      <button onclick="window.print()" style="background:#1e3a8a;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">🖨 Imprimir / PDF</button>
+    </div>`;
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+};
+
+/* ============ EXPOSIÇÃO + BOOT ============ */
+['fAno','fMes','fStatus'].forEach(id => document.getElementById(id).addEventListener('change', render));
+
+API.abrirRapido((ok) => { ok ? UI.syncOk() : UI.syncErr(); preencherFiltros(); render(); });
+preencherFiltros(); render();
+
+} // fim
+</script>
+</body>
+</html>

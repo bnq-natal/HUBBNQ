@@ -1,0 +1,375 @@
+{
+  "contraturno_pacotes": [
+    {
+      "pacote": "Duni",
+      "formato": "Integral",
+      "horas": 10,
+      "valor": 167.0
+    },
+    {
+      "pacote": "Tê",
+      "formato": "Integral",
+      "horas": 40,
+      "valor": 485.0
+    },
+    {
+      "pacote": "Salamê",
+      "formato": "Integral",
+      "horas": 80,
+      "valor": 947.0
+    },
+    {
+      "pacote": "Minguê",
+      "formato": "Integral",
+      "horas": 120,
+      "valor": 1190.0
+    },
+    {
+      "pacote": "Sorvete",
+      "formato": "Integral",
+      "horas": 160,
+      "valor": 1430.0
+    },
+    {
+      "pacote": "Colorê",
+      "formato": "Integral",
+      "horas": 200,
+      "valor": 1640.0
+    },
+    {
+      "pacote": "Duni",
+      "formato": "Almoço+Contraturno",
+      "horas": 4,
+      "valor": 75.0
+    },
+    {
+      "pacote": "Tê",
+      "formato": "Almoço+Contraturno",
+      "horas": 16,
+      "valor": 250.0
+    },
+    {
+      "pacote": "Salamê",
+      "formato": "Almoço+Contraturno",
+      "horas": 32,
+      "valor": 495.0
+    },
+    {
+      "pacote": "Minguê",
+      "formato": "Almoço+Contraturno",
+      "horas": 48,
+      "valor": 650.0
+    },
+    {
+      "pacote": "Sorvete",
+      "formato": "Almoço+Contraturno",
+      "horas": 64,
+      "valor": 780.0
+    },
+    {
+      "pacote": "Colorê",
+      "formato": "Almoço+Contraturno",
+      "horas": 80,
+      "valor": 890.0
+    },
+    {
+      "pacote": "Uni",
+      "formato": "Contraturno",
+      "horas": 2,
+      "valor": 40.0
+    },
+    {
+      "pacote": "Duni",
+      "formato": "Contraturno",
+      "horas": 4,
+      "valor": 65.0
+    },
+    {
+      "pacote": "Tê",
+      "formato": "Contraturno",
+      "horas": 16,
+      "valor": 230.0
+    },
+    {
+      "pacote": "Salamê",
+      "formato": "Contraturno",
+      "horas": 32,
+      "valor": 440.0
+    },
+    {
+      "pacote": "Minguê",
+      "formato": "Contraturno",
+      "horas": 48,
+      "valor": 560.0
+    },
+    {
+      "pacote": "Sorvete",
+      "formato": "Contraturno",
+      "horas": 64,
+      "valor": 670.0
+    },
+    {
+      "pacote": "Colorê",
+      "formato": "Contraturno",
+      "horas": 80,
+      "valor": 760.0
+    }
+  ],
+  "colonia_faixas": [
+    {
+      "min": 1,
+      "max": 2,
+      "valor_turno": 95.0
+    },
+    {
+      "min": 3,
+      "max": 4,
+      "valor_turno": 85.0
+    },
+    {
+      "min": 5,
+      "max": 9,
+      "valor_turno": 80.0
+    },
+    {
+      "min": 10,
+      "max": 14,
+      "valor_turno": 75.0
+    },
+    {
+      "min": 15,
+      "max": 999,
+      "valor_turno": 70.0
+    }
+  ],
+  "colonia_regras": {
+    "turno_horas": 4,
+    "turno_manha": "7h45-11h45",
+    "turno_tarde": "13h45-17h45",
+    "desconto_contraturno_ativo": 0.1,
+    "obs": "Cliente com saldo ativo no contraturno tem 10% desc. Contraturno NÃO converte em colônia."
+  },
+  "festa_pe_no_chao_fds": [
+    {
+      "criancas": 10,
+      "adultos": 5,
+      "valor": 2797,
+      "hora_adicional": 250,
+      "crianca_extra": 100
+    },
+    {
+      "criancas": 15,
+      "adultos": 10,
+      "valor": 3197,
+      "hora_adicional": 300,
+      "crianca_extra": 100
+    },
+    {
+      "criancas": 20,
+      "adultos": 10,
+      "valor": 3697,
+      "hora_adicional": 350,
+      "crianca_extra": 100
+    },
+    {
+      "criancas": 25,
+      "adultos": 15,
+      "valor": 3997,
+      "hora_adicional": 400,
+      "crianca_extra": 100
+    },
+    {
+      "criancas": 30,
+      "adultos": 15,
+      "valor": 4297,
+      "hora_adicional": 450,
+      "crianca_extra": 100
+    },
+    {
+      "criancas": 40,
+      "adultos": 20,
+      "valor": 4900,
+      "hora_adicional": 500,
+      "crianca_extra": 100
+    },
+    {
+      "criancas": 50,
+      "adultos": 25,
+      "valor": 5900,
+      "hora_adicional": 600,
+      "crianca_extra": 100
+    }
+  ],
+  "festa_pe_no_chao_semana": [
+    {
+      "criancas": 5,
+      "adultos": 5,
+      "valor": 697,
+      "hora_adicional": 250
+    },
+    {
+      "criancas": 10,
+      "adultos": 5,
+      "valor": 1297,
+      "hora_adicional": 300
+    },
+    {
+      "criancas": 15,
+      "adultos": 5,
+      "valor": 1997,
+      "hora_adicional": 350
+    }
+  ],
+  "festa_quintal_todinho_seu": [
+    {
+      "criancas": 5,
+      "adultos": 15,
+      "valor": 1997,
+      "hora_adicional": 350
+    },
+    {
+      "criancas": 10,
+      "adultos": 20,
+      "valor": 2197,
+      "hora_adicional": 450
+    },
+    {
+      "criancas": 15,
+      "adultos": 30,
+      "valor": 2597,
+      "hora_adicional": 500
+    },
+    {
+      "criancas": 20,
+      "adultos": 35,
+      "valor": 2897,
+      "hora_adicional": 600
+    },
+    {
+      "criancas": 25,
+      "adultos": 35,
+      "valor": 3049,
+      "hora_adicional": 750
+    },
+    {
+      "criancas": 30,
+      "adultos": 35,
+      "valor": 3149,
+      "hora_adicional": 750
+    },
+    {
+      "criancas": 40,
+      "adultos": 35,
+      "valor": 3547,
+      "hora_adicional": 750
+    },
+    {
+      "criancas": 50,
+      "adultos": 35,
+      "valor": 4397,
+      "hora_adicional": 750
+    }
+  ],
+  "festa_quintal_de_casa": [
+    {
+      "faixa": "Até 10",
+      "criancas_max": 10,
+      "valor": 750,
+      "brincantes": 2
+    },
+    {
+      "faixa": "11 a 20",
+      "criancas_max": 20,
+      "valor": 950,
+      "brincantes": 3
+    },
+    {
+      "faixa": "21 a 30",
+      "criancas_max": 30,
+      "valor": 1200,
+      "brincantes": 4
+    }
+  ],
+  "oficinas": [
+    {
+      "nome": "Oficina de música",
+      "valor": 200.0,
+      "tipo": "convencional"
+    },
+    {
+      "nome": "Oficina de teatro",
+      "valor": 200.0,
+      "tipo": "convencional"
+    },
+    {
+      "nome": "Caça ao tesouro",
+      "valor": 200.0,
+      "tipo": "convencional"
+    },
+    {
+      "nome": "Slime",
+      "valor": 200.0,
+      "tipo": "convencional"
+    },
+    {
+      "nome": "Baladinha",
+      "valor": 200.0,
+      "tipo": "convencional"
+    },
+    {
+      "nome": "Pocket Show",
+      "valor": 0,
+      "tipo": "consultar"
+    },
+    {
+      "nome": "Oficina personalizada",
+      "valor": 250.0,
+      "tipo": "personalizada_a_partir_de"
+    }
+  ],
+  "festa_extras": [
+    {
+      "nome": "Kit lanche adicional (Pé no Chão FDS)",
+      "valor": 25.0
+    },
+    {
+      "nome": "Kit lanche adicional (Pé no Chão semana)",
+      "valor": 20.0
+    },
+    {
+      "nome": "Adulto adicional (Pé no Chão)",
+      "valor": 30.0
+    },
+    {
+      "nome": "Adulto adicional (Quintal Todinho Seu)",
+      "valor": 15.0
+    },
+    {
+      "nome": "30min excedente (Pé no Chão / QTS)",
+      "valor": 200.0
+    },
+    {
+      "nome": "30min excedente (Quintal de Casa)",
+      "valor": 100.0
+    }
+  ],
+  "festa_regras": {
+    "sinal_percent": 0.3,
+    "saldo_percent": 0.7,
+    "prazo_saldo_dias": 7,
+    "desc_pix_dinheiro": 0.05,
+    "tolerancia_min": 30,
+    "inclui_no_modelo": "1 oficina + 1 atividade (FDS). Semana Pé no Chão segue contraturno.",
+    "status": [
+      "Reserva",
+      "Pagando",
+      "Pago 100%",
+      "Realizada",
+      "Cancelada"
+    ]
+  },
+  "festa_kits": {
+    "infantil": "6 Salgados, 1 Mini pizza, 1 Cachorro quente, 1 Garrafinha de suco",
+    "adulto": "6 Salgados, 2 Mini pizza, 1 Cachorro quente, 1 Pão de queijo, Suco"
+  }
+}
