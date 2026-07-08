@@ -1,59 +1,59 @@
 /* ============================================================
    shared/auth.js — Autenticação e sessão (frontend)
-   Guarda o usuario logado e os módulos que ele pode ver.
-   A permissão REAL é recheada no backend de cada gravação.
-   ============================================================= */
+   Guarda o usuário logado e os módulos que ele pode ver.
+   A permissão REAL é rechecada no backend a cada gravação.
+   ============================================================ */
 const AUTH = (() => {
   const LS_USER = 'bq_usuario';
 
   // Catálogo de módulos da plataforma (label + arquivo + ícone)
   const MODULOS = [
-    { id: 'cadastro', nome: 'Cadastro', ícone: '👨‍👩‍👧', arquivo: 'cadastro.html' },
-    { id: 'fluxo', nome: 'Fluxo de Caixa', ícone: '💰', arquivo: 'fluxo.html' },
-    { id: 'contraturno', nome: 'Créditos (Contraturno/Colônia)', ícone: '🎨', arquivo: 'creditos.html' },
-    { id: 'festinha', nome: 'Festinhas', ícone: '🎉', arquivo: 'festinha.html' },
-    { id: 'brincantes', nome: 'Brincantes & Escala', ícone: '🙋', arquivo: 'brincantes.html' },
-    { id: 'folha', nome: 'Folha de Pagamento', ícone: '📋', arquivo: 'folha.html' },
-    { id: 'admin', nome: 'Administração', ícone: '⚙️', arquivo: 'admin.html' },
+    { id: 'cadastro',    nome: 'Cadastro',                 icone: '👨‍👩‍👧', arquivo: 'cadastro.html' },
+    { id: 'fluxo',       nome: 'Fluxo de Caixa',           icone: '💰', arquivo: 'fluxo.html' },
+    { id: 'contraturno', nome: 'Créditos (Contraturno/Colônia)', icone: '🎨', arquivo: 'creditos.html' },
+    { id: 'festinha',    nome: 'Festinhas',                icone: '🎉', arquivo: 'festinha.html' },
+    { id: 'brincantes',  nome: 'Brincantes & Escala',      icone: '🙋', arquivo: 'brincantes.html' },
+    { id: 'folha',       nome: 'Folha de Pagamento',       icone: '📋', arquivo: 'folha.html' },
+    { id: 'admin',       nome: 'Administração',            icone: '⚙️', arquivo: 'admin.html' },
   ];
 
-  função usuarioAtual() {
+  function usuarioAtual() {
     try { return JSON.parse(localStorage.getItem(LS_USER)) || null; } catch { return null; }
   }
   function logado() { return !!usuarioAtual(); }
 
-  função assíncrona login(loginUser, senha) {
-    const r = aguarda API.chamar({ action: 'login', login: loginUser, senha });
+  async function login(loginUser, senha) {
+    const r = await API.chamar({ action: 'login', login: loginUser, senha });
     if (r.ok) localStorage.setItem(LS_USER, JSON.stringify(r.usuario));
-    retornar r;
+    return r;
   }
   function logout() { localStorage.removeItem(LS_USER); location.href = 'index.html'; }
 
-  // modos que o usuario pode acessar (admin vê todos)
-  função módulosPermitidos() {
+  // módulos que o usuário pode acessar (admin vê todos)
+  function modulosPermitidos() {
     const u = usuarioAtual();
-    se (!u) retorne [];
-    se (u.role === 'admin') retorne MODULOS;
-    retornar MODULOS.filter(m => (u.modulos || []).includes(m.id));
+    if (!u) return [];
+    if (u.role === 'admin') return MODULOS;
+    return MODULOS.filter(m => (u.modulos || []).includes(m.id));
   }
-  função podeVer(idModulo) {
+  function podeVer(idModulo) {
     const u = usuarioAtual();
-    se (!u) retorne falso;
+    if (!u) return false;
     return u.role === 'admin' || (u.modulos || []).includes(idModulo);
   }
 
   // Guarda de página: chame no topo de cada módulo.
   // Redireciona para login se não autenticado ou sem permissão.
-  função protegerPágina(idMódulo) {
+  function protegerPagina(idModulo) {
     if (!API.configurada()) { location.href = 'index.html'; return false; }
     if (!logado()) { location.href = 'index.html'; return false; }
-    se (idModulo && !podeVer(idModulo)) {
+    if (idModulo && !podeVer(idModulo)) {
       alert('Você não tem acesso a este módulo.');
       location.href = 'index.html'; return false;
     }
-    retornar verdadeiro;
+    return true;
   }
 
   return { MODULOS, usuarioAtual, logado, login, logout,
-           módulosPermitidos, podeVer, protegerPagina };
+           modulosPermitidos, podeVer, protegerPagina };
 })();
