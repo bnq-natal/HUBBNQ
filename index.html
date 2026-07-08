@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brincar no Quintal — Gestão</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800">
+
+<!-- ============ TELA DE CONFIG (1ª vez no dispositivo) ============ -->
+<section id="telaConfig" class="hidden min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-xl shadow-lg w-full max-w-md p-6">
+    <h1 class="text-xl font-bold text-slate-900 mb-1">⚙️ Configuração inicial</h1>
+    <p class="text-xs text-slate-500 mb-4">Cole a URL do backend (Apps Script) e o token do app. Ficam salvos só neste dispositivo.</p>
+    <label class="text-xs font-semibold text-slate-600 uppercase">URL do Web App</label>
+    <input id="cfgUrl" class="w-full border border-slate-300 rounded px-3 py-2 text-sm mb-3" placeholder="https://script.google.com/macros/s/…/exec">
+    <label class="text-xs font-semibold text-slate-600 uppercase">Token do app</label>
+    <input id="cfgToken" type="password" class="w-full border border-slate-300 rounded px-3 py-2 text-sm mb-4" placeholder="token definido no Code.gs">
+    <div class="flex gap-2">
+      <button onclick="testarConfig()" class="bg-slate-200 hover:bg-slate-300 text-sm px-4 py-2 rounded">🔌 Testar</button>
+      <button onclick="salvarConfig()" class="bg-blue-900 hover:bg-blue-800 text-white text-sm px-4 py-2 rounded flex-1">Salvar e continuar</button>
+    </div>
+    <p id="cfgMsg" class="text-xs mt-3"></p>
+  </div>
+</section>
+
+<!-- ============ TELA DE LOGIN ============ -->
+<section id="telaLogin" class="hidden min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-xl shadow-lg w-full max-w-sm p-6">
+    <div class="text-center mb-5">
+      <div class="text-4xl mb-2">🌳</div>
+      <h1 class="text-xl font-bold text-slate-900">Brincar no Quintal</h1>
+      <p class="text-xs text-slate-500">Plataforma de Gestão</p>
+    </div>
+    <label class="text-xs font-semibold text-slate-600 uppercase">Usuário</label>
+    <input id="loginUser" class="w-full border border-slate-300 rounded px-3 py-2 text-sm mb-3" autocomplete="username">
+    <label class="text-xs font-semibold text-slate-600 uppercase">Senha</label>
+    <input id="loginSenha" type="password" class="w-full border border-slate-300 rounded px-3 py-2 text-sm mb-4" autocomplete="current-password"
+           onkeydown="if(event.key==='Enter')fazerLogin()">
+    <button onclick="fazerLogin()" class="w-full bg-blue-900 hover:bg-blue-800 text-white text-sm px-4 py-2.5 rounded font-semibold">Entrar</button>
+    <p id="loginMsg" class="text-xs text-red-600 mt-3 text-center"></p>
+    <button onclick="abrirConfig()" class="text-xs text-slate-400 hover:text-slate-600 mt-4 block mx-auto">⚙️ configurar backend</button>
+  </div>
+</section>
+
+<!-- ============ MENU DE MÓDULOS ============ -->
+<section id="telaMenu" class="hidden">
+  <header class="bg-slate-900 text-white shadow">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+      <div>
+        <h1 class="text-lg font-bold tracking-tight">🌳 Brincar no Quintal</h1>
+        <p class="text-xs text-slate-400">Plataforma de Gestão · <span id="menuSync" class="text-slate-400">☁</span></p>
+      </div>
+      <div class="flex items-center gap-3 text-sm">
+        <span class="text-slate-300" id="menuUser"></span>
+        <button onclick="AUTH.logout()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-xs">Sair</button>
+      </div>
+    </div>
+  </header>
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    <h2 class="text-lg font-semibold text-slate-700 mb-4">Selecione um módulo</h2>
+    <div id="gridModulos" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+  </main>
+</section>
+
+<script src="shared/api.js"></script>
+<script src="shared/auth.js"></script>
+<script src="shared/ui.js"></script>
+<script>
+/* ============ FLUXO DE ENTRADA ============ */
+function mostrar(tela) {
+  ['telaConfig', 'telaLogin', 'telaMenu'].forEach(t =>
+    document.getElementById(t).classList.toggle('hidden', t !== tela));
+}
+
+function abrirConfig() {
+  const c = API.cfg();
+  document.getElementById('cfgUrl').value = c.url;
+  document.getElementById('cfgToken').value = c.token;
+  mostrar('telaConfig');
+}
+
+async function testarConfig() {
+  const url = document.getElementById('cfgUrl').value.trim();
+  const token = document.getElementById('cfgToken').value.trim();
+  const msg = document.getElementById('cfgMsg');
+  if (!url.startsWith('https://script.google.com/')) { msg.innerHTML = '<span class="text-red-600">URL inválida (deve terminar em /exec).</span>'; return; }
+  API.salvarConfig(url, token);
+  msg.textContent = 'testando…';
+  try {
+    const r = await API.chamar({ action: 'ping' });
+    msg.innerHTML = r.ok ? '<span class="text-green-700">✔ Conexão e token OK.</span>'
+                         : '<span class="text-red-600">✖ ' + UI.esc(r.erro) + '</span>';
+  } catch (e) { msg.innerHTML = '<span class="text-red-600">✖ ' + UI.esc(e.message) + '</span>'; }
+}
+
+async function salvarConfig() {
+  const url = document.getElementById('cfgUrl').value.trim();
+  const token = document.getElementById('cfgToken').value.trim();
+  if (!url.startsWith('https://script.google.com/')) { document.getElementById('cfgMsg').innerHTML = '<span class="text-red-600">URL inválida.</span>'; return; }
+  API.salvarConfig(url, token);
+  mostrar('telaLogin');
+}
+
+async function fazerLogin() {
+  const user = document.getElementById('loginUser').value.trim();
+  const senha = document.getElementById('loginSenha').value;
+  const msg = document.getElementById('loginMsg');
+  msg.textContent = 'entrando…';
+  try {
+    const r = await AUTH.login(user, senha);
+    if (r.ok) { await entrarNoMenu(); }
+    else msg.textContent = r.erro || 'falha no login';
+  } catch (e) { msg.textContent = 'Erro de conexão: ' + e.message; }
+}
+
+async function entrarNoMenu() {
+  const u = AUTH.usuarioAtual();
+  document.getElementById('menuUser').textContent = u.nome + ' · ' + u.role;
+  // baixa o banco em cache
+  try { document.getElementById('menuSync').textContent = '⟳ carregando…'; await API.baixar();
+        document.getElementById('menuSync').textContent = '☁ OK'; }
+  catch (e) { document.getElementById('menuSync').textContent = '⚠ offline'; }
+
+  const mods = AUTH.modulosPermitidos();
+  document.getElementById('gridModulos').innerHTML = mods.map(m => `
+    <a href="${m.arquivo}" class="bg-white rounded-xl border border-slate-200 p-6 text-center hover:shadow-md hover:border-blue-300 transition">
+      <div class="text-4xl mb-2">${m.icone}</div>
+      <p class="font-semibold text-slate-800">${m.nome}</p>
+    </a>`).join('') || '<p class="text-slate-500">Nenhum módulo liberado para seu usuário.</p>';
+  mostrar('telaMenu');
+}
+
+/* ============ BOOT ============ */
+(function () {
+  API.carregarLocal();
+  if (!API.configurada()) { mostrar('telaConfig'); return; }
+  if (AUTH.logado()) { entrarNoMenu(); }
+  else mostrar('telaLogin');
+})();
+</script>
+</body>
+</html>

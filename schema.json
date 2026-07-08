@@ -1,0 +1,1214 @@
+{
+  "plataforma": "Brincar no Quintal — Gestão",
+  "versao": "1.0",
+  "descricao": "Schema modular: cadastro hierárquico (responsável→crianças), fluxo de caixa como hub, contraturno/colônia com saldo, festinhas, agendamentos.",
+  "parametros": {
+    "turnos": [
+      "Manhã",
+      "Tarde",
+      "Integral"
+    ],
+    "contas_bancarias": [
+      "PJ",
+      "PF",
+      "Dinheiro",
+      "Sócio"
+    ],
+    "origem_lead": [
+      "Instagram",
+      "Indicação",
+      "Patrocinado",
+      "Google",
+      "Festinha",
+      "Outros"
+    ],
+    "fluxo_tipo": [
+      "Entrada",
+      "Saída"
+    ],
+    "fluxo_grupos": [
+      "Colônia de Férias",
+      "Contraturno",
+      "Festinha",
+      "Oficina",
+      "Evento Escolar",
+      "Aluguel Sala",
+      "Outras Entradas",
+      "Despesa com Pessoal",
+      "Despesas Administrativas",
+      "Despesas Financeiras",
+      "Fornecedores",
+      "Despesas Manutenção",
+      "Obras Iniciais",
+      "Impostos",
+      "Aluguéis",
+      "Devolução de Vendas",
+      "Retirada Sócio",
+      "Transferência",
+      "Cartão",
+      "Dinheiro",
+      "Troca",
+      "Brinde",
+      "Outras Saídas"
+    ],
+    "contas_contabeis_entrada": [
+      "Colônia de Férias",
+      "Contraturno - Pacotes",
+      "Buffet Festinhas",
+      "Oficinas",
+      "Eventos Escolares",
+      "Aluguel Sala",
+      "Locação Sala",
+      "Outras Entradas"
+    ],
+    "contas_contabeis_saida": [
+      "Despesa com Pessoal - Oficial",
+      "Despesa com Pessoal - Backup",
+      "Despesa com Pessoal - Extra",
+      "Despesas Financeiras",
+      "Água Mineral",
+      "Material de Expediente",
+      "Manutenção Predial",
+      "Obras Iniciais",
+      "Impostos",
+      "Lanches e Refeições",
+      "Materiais para Oficinas",
+      "Água e Esgoto",
+      "Telefones e Internet",
+      "Energia Elétrica",
+      "Aluguel",
+      "Contador",
+      "Devolução de Vendas",
+      "Mídias Sociais",
+      "Gás e Água",
+      "Material para Festinhas",
+      "Material de Limpeza",
+      "Transportes (Combust/Táxi)",
+      "Brinquedos",
+      "Tecnologia e Computadores",
+      "Medicamentos, Exames",
+      "Sistemas de Informática",
+      "Retirada Sócio",
+      "Fardamento, EPIs e EPCs",
+      "Troca Colônia/Contraturno",
+      "Outras Saídas"
+    ],
+    "pacotes": [
+      {
+        "nome": "Pacote Sorvete",
+        "tipo": "horas",
+        "qtd": 5,
+        "valor": 0,
+        "ativo": true
+      },
+      {
+        "nome": "Pacote Minguê",
+        "tipo": "horas",
+        "qtd": 8,
+        "valor": 0,
+        "ativo": true
+      },
+      {
+        "nome": "Pacote Salamê",
+        "tipo": "horas",
+        "qtd": 12,
+        "valor": 0,
+        "ativo": true
+      },
+      {
+        "nome": "Pacote Une",
+        "tipo": "horas",
+        "qtd": 16,
+        "valor": 0,
+        "ativo": true
+      },
+      {
+        "nome": "Pacote Colorê",
+        "tipo": "horas",
+        "qtd": 20,
+        "valor": 0,
+        "ativo": true
+      },
+      {
+        "nome": "Pacote Tê",
+        "tipo": "horas",
+        "qtd": 30,
+        "valor": 0,
+        "ativo": true
+      },
+      {
+        "nome": "Pacote Dune",
+        "tipo": "horas",
+        "qtd": 40,
+        "valor": 0,
+        "ativo": true
+      },
+      {
+        "nome": "Colônia de Férias",
+        "tipo": "turno_fechado",
+        "qtd": 1,
+        "valor": 0,
+        "ativo": true
+      }
+    ],
+    "modelos_festa": [
+      {
+        "formato": "Pé no chão - FDS",
+        "valor_base": 0,
+        "criancas": 40,
+        "adultos": 20,
+        "com_lanche": true,
+        "ativo": true
+      },
+      {
+        "formato": "Pé no chão - Semana",
+        "valor_base": 0,
+        "criancas": 40,
+        "adultos": 20,
+        "com_lanche": true,
+        "ativo": true
+      },
+      {
+        "formato": "Quintal Todinho Seu",
+        "valor_base": 0,
+        "criancas": 40,
+        "adultos": 30,
+        "com_lanche": true,
+        "ativo": true
+      },
+      {
+        "formato": "Quintal de Casa - EXT",
+        "valor_base": 0,
+        "criancas": 0,
+        "adultos": 0,
+        "com_lanche": false,
+        "ativo": true
+      }
+    ],
+    "tipos_festa": [
+      "Festa Infantil",
+      "Evento Escolar",
+      "Empresarial"
+    ],
+    "status_festa": [
+      "Reserva",
+      "Pagando",
+      "Pago 100%",
+      "Realizada",
+      "Cancelada"
+    ],
+    "oficinas": [
+      {
+        "nome": "Slime",
+        "valor": 0,
+        "ativo": true
+      },
+      {
+        "nome": "Experiência Maluca",
+        "valor": 0,
+        "ativo": true
+      },
+      {
+        "nome": "Chão de Sabão",
+        "valor": 0,
+        "ativo": true
+      },
+      {
+        "nome": "Caça ao Tesouro",
+        "valor": 0,
+        "ativo": true
+      },
+      {
+        "nome": "Pintura na Parede",
+        "valor": 0,
+        "ativo": true
+      },
+      {
+        "nome": "Banho de Espuma",
+        "valor": 0,
+        "ativo": true
+      },
+      {
+        "nome": "Torta na Cara",
+        "valor": 0,
+        "ativo": true
+      },
+      {
+        "nome": "Baladinha",
+        "valor": 0,
+        "ativo": true
+      },
+      {
+        "nome": "Festa na Semana",
+        "valor": 0,
+        "ativo": true
+      }
+    ],
+    "status_movimento": [
+      "Contratado",
+      "Realizado",
+      "Agendado"
+    ],
+    "opcoes_suco": [
+      "POUCO Açúcar: Uva",
+      "POUCO Açúcar: Cajá",
+      "POUCO Açúcar: Goiaba",
+      "POUCO Açúcar: Cajú",
+      "POUCO Açúcar: Acerola",
+      "SEM Açúcar: Uva",
+      "SEM Açúcar: Goiaba"
+    ],
+    "funcoes": [
+      "Portaria",
+      "Limpeza",
+      "Brincante",
+      "Coordenador do Evento",
+      "Recepção"
+    ],
+    "tipo_dia": [
+      "semana",
+      "sabado",
+      "domingo",
+      "feriado"
+    ],
+    "valores_funcao": [
+      {
+        "funcao": "Portaria",
+        "semana": 0,
+        "sabado": 0,
+        "domingo": 0,
+        "feriado": 0
+      },
+      {
+        "funcao": "Limpeza",
+        "semana": 0,
+        "sabado": 0,
+        "domingo": 0,
+        "feriado": 0
+      },
+      {
+        "funcao": "Brincante",
+        "semana": 0,
+        "sabado": 0,
+        "domingo": 0,
+        "feriado": 0
+      },
+      {
+        "funcao": "Coordenador do Evento",
+        "semana": 0,
+        "sabado": 0,
+        "domingo": 0,
+        "feriado": 0
+      },
+      {
+        "funcao": "Recepção",
+        "semana": 0,
+        "sabado": 0,
+        "domingo": 0,
+        "feriado": 0
+      }
+    ]
+  },
+  "tabelas": {
+    "responsaveis": {
+      "descricao": "Cadastro do responsável (pai/mãe/tutor). Chave = CPF.",
+      "colunas": [
+        {
+          "nome": "cod",
+          "tipo": "texto",
+          "obs": "PK sequencial: RESP-0001 (sempre existe)"
+        },
+        {
+          "nome": "cpf",
+          "tipo": "texto",
+          "obs": "chave secundária, única quando preenchida (pode ficar vazio)"
+        },
+        {
+          "nome": "nome",
+          "tipo": "texto",
+          "obs": "temporário: 'Resp. <nome da criança>' até você corrigir"
+        },
+        {
+          "nome": "nascimento",
+          "tipo": "data",
+          "obs": ""
+        },
+        {
+          "nome": "sexo",
+          "tipo": "lista:M,F,Outro",
+          "obs": ""
+        },
+        {
+          "nome": "estado_civil",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "telefone",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "telefone2",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "email",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "cep",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "logradouro",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "numero",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "complemento",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "bairro",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "cidade",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "uf",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "banco",
+          "tipo": "texto",
+          "obs": "para devolução de saldo"
+        },
+        {
+          "nome": "agencia",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "conta",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "pix",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "origem_lead",
+          "tipo": "lista:origem_lead",
+          "obs": "como conheceu"
+        },
+        {
+          "nome": "cpf_nf",
+          "tipo": "texto",
+          "obs": "CPF para nota fiscal (se diferente)"
+        },
+        {
+          "nome": "observacoes",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "status",
+          "tipo": "lista:ativo,inativo",
+          "obs": "default ativo"
+        },
+        {
+          "nome": "data_cadastro",
+          "tipo": "data",
+          "obs": ""
+        }
+      ]
+    },
+    "criancas": {
+      "descricao": "Cadastro da criança, vinculada ao responsável (1 responsável : N crianças).",
+      "colunas": [
+        {
+          "nome": "id_crianca",
+          "tipo": "texto",
+          "obs": "chave única (uuid ou cpf_resp+seq)"
+        },
+        {
+          "nome": "cod_responsavel",
+          "tipo": "texto",
+          "obs": "FK -> responsaveis.cod"
+        },
+        {
+          "nome": "nome",
+          "tipo": "texto",
+          "obs": "obrigatório"
+        },
+        {
+          "nome": "nascimento",
+          "tipo": "data",
+          "obs": ""
+        },
+        {
+          "nome": "idade",
+          "tipo": "numero",
+          "obs": "calculado a partir de nascimento"
+        },
+        {
+          "nome": "sexo",
+          "tipo": "lista:M,F,Outro",
+          "obs": ""
+        },
+        {
+          "nome": "cpf",
+          "tipo": "texto",
+          "obs": "se a criança tiver"
+        },
+        {
+          "nome": "escola",
+          "tipo": "texto",
+          "obs": "onde estuda"
+        },
+        {
+          "nome": "escolaridade",
+          "tipo": "texto",
+          "obs": "ano/série"
+        },
+        {
+          "nome": "turno_escola",
+          "tipo": "lista:turnos",
+          "obs": "manhã/tarde/integral"
+        },
+        {
+          "nome": "nome_pai",
+          "tipo": "texto",
+          "obs": "consulta"
+        },
+        {
+          "nome": "telefone_pai",
+          "tipo": "texto",
+          "obs": "consulta"
+        },
+        {
+          "nome": "nome_mae",
+          "tipo": "texto",
+          "obs": "consulta"
+        },
+        {
+          "nome": "telefone_mae",
+          "tipo": "texto",
+          "obs": "consulta"
+        },
+        {
+          "nome": "outro_responsavel",
+          "tipo": "texto",
+          "obs": "consulta (avó, tio...)"
+        },
+        {
+          "nome": "telefone_outro",
+          "tipo": "texto",
+          "obs": "consulta"
+        },
+        {
+          "nome": "aut_imagem",
+          "tipo": "lista:sim,nao",
+          "obs": "autoriza uso de imagem"
+        },
+        {
+          "nome": "alergias",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "restricoes_alimentares",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "obs_medicas",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "status",
+          "tipo": "lista:ativo,inativo",
+          "obs": ""
+        },
+        {
+          "nome": "data_cadastro",
+          "tipo": "data",
+          "obs": ""
+        }
+      ]
+    },
+    "fluxo_caixa": {
+      "descricao": "Lançamentos financeiros. Vendas de contraturno/colônia/festinha nascem aqui.",
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "texto",
+          "obs": "chave única"
+        },
+        {
+          "nome": "data",
+          "tipo": "data",
+          "obs": ""
+        },
+        {
+          "nome": "mes",
+          "tipo": "numero",
+          "obs": "derivado da data"
+        },
+        {
+          "nome": "ano",
+          "tipo": "numero",
+          "obs": "derivado da data"
+        },
+        {
+          "nome": "fluxo",
+          "tipo": "lista:fluxo_tipo",
+          "obs": "Entrada/Saída"
+        },
+        {
+          "nome": "grupo",
+          "tipo": "lista:fluxo_grupos",
+          "obs": "classificação nível 1"
+        },
+        {
+          "nome": "conta_contabil",
+          "tipo": "texto",
+          "obs": "categoria nível 2"
+        },
+        {
+          "nome": "tipo_receita",
+          "tipo": "texto",
+          "obs": "produto vendido (pacote, festinha...)"
+        },
+        {
+          "nome": "detalhamento",
+          "tipo": "texto",
+          "obs": "descrição livre"
+        },
+        {
+          "nome": "valor",
+          "tipo": "numero",
+          "obs": "R$"
+        },
+        {
+          "nome": "conta",
+          "tipo": "lista:contas_bancarias",
+          "obs": "PJ/PF/Dinheiro/Sócio"
+        },
+        {
+          "nome": "origem",
+          "tipo": "texto",
+          "obs": "BNQ/Sócio"
+        },
+        {
+          "nome": "ori_lead",
+          "tipo": "lista:origem_lead",
+          "obs": "canal de origem"
+        },
+        {
+          "nome": "horas",
+          "tipo": "numero",
+          "obs": "se for pacote de horas"
+        },
+        {
+          "nome": "cod_responsavel",
+          "tipo": "texto",
+          "obs": "FK -> responsaveis.cod"
+        },
+        {
+          "nome": "id_crianca",
+          "tipo": "texto",
+          "obs": "FK -> criancas (opcional)"
+        },
+        {
+          "nome": "cpf_nf",
+          "tipo": "texto",
+          "obs": "CPF da nota"
+        },
+        {
+          "nome": "turno",
+          "tipo": "lista:turnos",
+          "obs": ""
+        },
+        {
+          "nome": "conciliacao",
+          "tipo": "lista:sim,nao",
+          "obs": "conciliado no banco?"
+        },
+        {
+          "nome": "id_ref_modulo",
+          "tipo": "texto",
+          "obs": "liga ao registro do módulo gerado"
+        },
+        {
+          "nome": "observacoes",
+          "tipo": "texto",
+          "obs": ""
+        }
+      ]
+    },
+    "movimentos": {
+      "descricao": "Compras (Contratado) e consumos (Realizado) de contraturno e colônia. Saldo = Σ contratado − Σ realizado por responsável+programa.",
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "texto",
+          "obs": "chave única"
+        },
+        {
+          "nome": "data",
+          "tipo": "data",
+          "obs": ""
+        },
+        {
+          "nome": "mes",
+          "tipo": "numero",
+          "obs": ""
+        },
+        {
+          "nome": "ano",
+          "tipo": "numero",
+          "obs": ""
+        },
+        {
+          "nome": "programa",
+          "tipo": "lista:Contraturno,Colonia",
+          "obs": "qual módulo"
+        },
+        {
+          "nome": "cod_responsavel",
+          "tipo": "texto",
+          "obs": "FK -> responsaveis.cod"
+        },
+        {
+          "nome": "id_crianca",
+          "tipo": "texto",
+          "obs": "FK -> criancas (quem consumiu)"
+        },
+        {
+          "nome": "nome_crianca",
+          "tipo": "texto",
+          "obs": "desnormalizado p/ leitura"
+        },
+        {
+          "nome": "tipo_entrada",
+          "tipo": "lista:status_movimento",
+          "obs": "Contratado/Realizado/Agendado"
+        },
+        {
+          "nome": "pacote",
+          "tipo": "lista:pacotes",
+          "obs": "se Contratado"
+        },
+        {
+          "nome": "qtde",
+          "tipo": "numero",
+          "obs": "horas/turnos (+ compra, − consumo)"
+        },
+        {
+          "nome": "valor",
+          "tipo": "numero",
+          "obs": "R$ (na compra)"
+        },
+        {
+          "nome": "turno",
+          "tipo": "lista:turnos",
+          "obs": ""
+        },
+        {
+          "nome": "id_fluxo",
+          "tipo": "texto",
+          "obs": "FK -> fluxo_caixa (a compra)"
+        },
+        {
+          "nome": "cpf_nf",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "conc",
+          "tipo": "texto",
+          "obs": "conferência/responsável pelo lançamento"
+        },
+        {
+          "nome": "observacoes",
+          "tipo": "texto",
+          "obs": ""
+        }
+      ]
+    },
+    "festinhas": {
+      "descricao": "Eventos de festinha. Comprados à parte, criados a partir do lançamento no fluxo.",
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "texto",
+          "obs": "chave única"
+        },
+        {
+          "nome": "festa_no",
+          "tipo": "numero",
+          "obs": "número sequencial"
+        },
+        {
+          "nome": "codigo_festa",
+          "tipo": "texto",
+          "obs": "ex: F87-/25-Manhã"
+        },
+        {
+          "nome": "status",
+          "tipo": "lista:status_festa",
+          "obs": "Reserva/Pagando/Pago 100%/Realizada/Cancelada"
+        },
+        {
+          "nome": "aniversariante",
+          "tipo": "texto",
+          "obs": "nome da criança da festa"
+        },
+        {
+          "nome": "idade",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "data_nasc",
+          "tipo": "data",
+          "obs": ""
+        },
+        {
+          "nome": "data_festa",
+          "tipo": "data",
+          "obs": ""
+        },
+        {
+          "nome": "turno",
+          "tipo": "lista:turnos",
+          "obs": ""
+        },
+        {
+          "nome": "hora",
+          "tipo": "texto",
+          "obs": "ex: 15h às 18h"
+        },
+        {
+          "nome": "cod_responsavel",
+          "tipo": "texto",
+          "obs": "FK -> responsaveis.cod"
+        },
+        {
+          "nome": "nome_contratante",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "telefone",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "tipo_festa",
+          "tipo": "lista:tipos_festa",
+          "obs": ""
+        },
+        {
+          "nome": "qtd_criancas",
+          "tipo": "numero",
+          "obs": ""
+        },
+        {
+          "nome": "qtd_adultos",
+          "tipo": "numero",
+          "obs": ""
+        },
+        {
+          "nome": "modelo_festa",
+          "tipo": "lista:modelos_festa",
+          "obs": "formato"
+        },
+        {
+          "nome": "com_lanche",
+          "tipo": "lista:sim,nao",
+          "obs": ""
+        },
+        {
+          "nome": "opcao_suco_1",
+          "tipo": "lista:opcoes_suco",
+          "obs": ""
+        },
+        {
+          "nome": "opcao_suco_2",
+          "tipo": "lista:opcoes_suco",
+          "obs": ""
+        },
+        {
+          "nome": "opcao_suco_3",
+          "tipo": "lista:opcoes_suco",
+          "obs": ""
+        },
+        {
+          "nome": "oficina_1",
+          "tipo": "lista:oficinas",
+          "obs": ""
+        },
+        {
+          "nome": "oficina_2",
+          "tipo": "lista:oficinas",
+          "obs": ""
+        },
+        {
+          "nome": "oficina_extra",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "tema",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "extras",
+          "tipo": "texto",
+          "obs": "itens adicionais"
+        },
+        {
+          "nome": "valor_total",
+          "tipo": "numero",
+          "obs": "R$"
+        },
+        {
+          "nome": "sinal_pago",
+          "tipo": "numero",
+          "obs": "entrada/reserva"
+        },
+        {
+          "nome": "id_fluxo",
+          "tipo": "texto",
+          "obs": "FK -> fluxo_caixa"
+        },
+        {
+          "nome": "observacoes",
+          "tipo": "texto",
+          "obs": ""
+        }
+      ]
+    },
+    "agendamentos": {
+      "descricao": "Agenda de presença do contraturno (dia a dia). Alimenta o consumo (Realizado).",
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "texto",
+          "obs": "chave única"
+        },
+        {
+          "nome": "data",
+          "tipo": "data",
+          "obs": ""
+        },
+        {
+          "nome": "mes",
+          "tipo": "numero",
+          "obs": ""
+        },
+        {
+          "nome": "ano",
+          "tipo": "numero",
+          "obs": ""
+        },
+        {
+          "nome": "id_crianca",
+          "tipo": "texto",
+          "obs": "FK -> criancas"
+        },
+        {
+          "nome": "nome_crianca",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "cod_responsavel",
+          "tipo": "texto",
+          "obs": "FK -> responsaveis.cod"
+        },
+        {
+          "nome": "turno",
+          "tipo": "lista:turnos",
+          "obs": ""
+        },
+        {
+          "nome": "tipo_entrada",
+          "tipo": "lista:Agendado,Realizado,Falta",
+          "obs": ""
+        },
+        {
+          "nome": "qtde_horas",
+          "tipo": "numero",
+          "obs": "horas do dia"
+        },
+        {
+          "nome": "observacoes",
+          "tipo": "texto",
+          "obs": "ex: Consome contraturno / Falta pagar"
+        }
+      ]
+    },
+    "usuarios": {
+      "descricao": "Controle de acesso por módulo (verificado no backend).",
+      "colunas": [
+        {
+          "nome": "login",
+          "tipo": "texto",
+          "obs": "email ou usuário"
+        },
+        {
+          "nome": "nome",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "role",
+          "tipo": "lista:admin,gerente,operacional,leitor",
+          "obs": ""
+        },
+        {
+          "nome": "modulos",
+          "tipo": "texto",
+          "obs": "csv: folha,fluxo,contraturno,colonia,festinha,cadastro,admin"
+        },
+        {
+          "nome": "empresas",
+          "tipo": "texto",
+          "obs": "csv de CNPJs autorizados"
+        },
+        {
+          "nome": "ativo",
+          "tipo": "lista:sim,nao",
+          "obs": ""
+        }
+      ]
+    },
+    "conversoes_saldo": {
+      "descricao": "Troca de saldo entre Colônia (turnos 4h) e Contraturno (horas), proporcional ao valor de tabela. Gera 2 movimentos ligados.",
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "texto",
+          "obs": "chave única"
+        },
+        {
+          "nome": "data",
+          "tipo": "data",
+          "obs": ""
+        },
+        {
+          "nome": "cod_responsavel",
+          "tipo": "texto",
+          "obs": "FK -> responsaveis.cod"
+        },
+        {
+          "nome": "programa_origem",
+          "tipo": "lista:Contraturno,Colonia",
+          "obs": ""
+        },
+        {
+          "nome": "qtde_origem",
+          "tipo": "numero",
+          "obs": "turnos (colônia) ou horas (contraturno) — baixados"
+        },
+        {
+          "nome": "programa_destino",
+          "tipo": "lista:Contraturno,Colonia",
+          "obs": ""
+        },
+        {
+          "nome": "qtde_destino",
+          "tipo": "numero",
+          "obs": "creditados no destino"
+        },
+        {
+          "nome": "valor_reais",
+          "tipo": "numero",
+          "obs": "R$ conservado na conversão"
+        },
+        {
+          "nome": "preco_unit_origem",
+          "tipo": "numero",
+          "obs": "R$/turno ou R$/hora usado"
+        },
+        {
+          "nome": "preco_unit_destino",
+          "tipo": "numero",
+          "obs": ""
+        },
+        {
+          "nome": "observacoes",
+          "tipo": "texto",
+          "obs": ""
+        }
+      ]
+    },
+    "brincantes": {
+      "descricao": "Cadastro da equipe que trabalha nos eventos (escala).",
+      "colunas": [
+        {
+          "nome": "cod",
+          "tipo": "texto",
+          "obs": "PK sequencial: BRINC-0001"
+        },
+        {
+          "nome": "cpf",
+          "tipo": "texto",
+          "obs": "opcional"
+        },
+        {
+          "nome": "nome",
+          "tipo": "texto",
+          "obs": "obrigatório"
+        },
+        {
+          "nome": "telefone",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "pix",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "banco",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "agencia",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "conta",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "funcoes",
+          "tipo": "texto",
+          "obs": "csv: Portaria,Limpeza,Brincante,Coordenador,Recepção"
+        },
+        {
+          "nome": "observacoes",
+          "tipo": "texto",
+          "obs": ""
+        },
+        {
+          "nome": "ativo",
+          "tipo": "lista:sim,nao",
+          "obs": ""
+        }
+      ]
+    },
+    "escalas": {
+      "descricao": "Escala de trabalho. Valor puxado de param_valores_funcao[funcao][tipo_dia]. Ao pagar, gera lançamento no fluxo_caixa.",
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "texto",
+          "obs": "chave única"
+        },
+        {
+          "nome": "data",
+          "tipo": "data",
+          "obs": "dia do trabalho"
+        },
+        {
+          "nome": "tipo_dia",
+          "tipo": "lista:semana,sabado,domingo,feriado",
+          "obs": "auto-detectado"
+        },
+        {
+          "nome": "cod_brincante",
+          "tipo": "texto",
+          "obs": "FK -> brincantes.cod"
+        },
+        {
+          "nome": "nome_brincante",
+          "tipo": "texto",
+          "obs": "desnormalizado"
+        },
+        {
+          "nome": "funcao",
+          "tipo": "lista:funcoes",
+          "obs": "função exercida no dia"
+        },
+        {
+          "nome": "valor",
+          "tipo": "numero",
+          "obs": "auto de param_valores_funcao"
+        },
+        {
+          "nome": "evento_ref",
+          "tipo": "texto",
+          "obs": "festinha/colônia/dia normal (opcional)"
+        },
+        {
+          "nome": "status_pgto",
+          "tipo": "lista:Pendente,Pago",
+          "obs": ""
+        },
+        {
+          "nome": "data_pgto",
+          "tipo": "data",
+          "obs": ""
+        },
+        {
+          "nome": "id_fluxo",
+          "tipo": "texto",
+          "obs": "FK -> fluxo_caixa (preenchido ao pagar)"
+        },
+        {
+          "nome": "observacoes",
+          "tipo": "texto",
+          "obs": ""
+        }
+      ]
+    }
+  },
+  "relacionamentos": [
+    "responsaveis.cod 1:N criancas.cod_responsavel",
+    "responsaveis.cod 1:N movimentos.cod_responsavel (saldo)",
+    "criancas.id_crianca 1:N movimentos.id_crianca (consumo)",
+    "responsaveis.cod 1:N conversoes_saldo.cod_responsavel",
+    "fluxo_caixa.id 1:1 movimentos.id_fluxo",
+    "fluxo_caixa.id 1:1 festinhas.id_fluxo",
+    "brincantes.cod 1:N escalas.cod_brincante",
+    "escalas.id 1:1 fluxo_caixa.id (pagamento)"
+  ],
+  "regras_negocio": {
+    "saldo_contraturno": "SOMA(qtde onde tipo_entrada=Contratado) - SOMA(qtde onde tipo_entrada=Realizado), agrupado por cpf_responsavel+programa. Saldo fica no RESPONSÁVEL, consumo rastreado por criança.",
+    "venda_gera_credito": "Ao lançar Entrada no fluxo_caixa de um pacote, cria automaticamente um movimento 'Contratado' no responsável.",
+    "festinha_a_parte": "Festinha é venda independente; não consome saldo de contraturno.",
+    "desembolso_folha": "Vem do módulo Folha (sistema separado) e entra como Saída mensal no fluxo_caixa (grupo 'Despesa com Pessoal').",
+    "chave_responsavel": "COD sequencial (RESP-0001) é a PK; CPF é secundária e opcional. FKs usam cod_responsavel — vínculo estável mesmo sem CPF ou ao corrigir o nome.",
+    "conversao_saldo": "Proporcional ao PREÇO DE TABELA atual. valor_R$ = qtde_origem × preco_unit_origem; qtde_destino = valor_R$ ÷ preco_unit_destino. Colônia em turnos de 4h; Contraturno em horas. Gera 2 movimentos ligados por id_conversao.",
+    "pagamento_brincante": "Valor por FUNÇÃO × TIPO_DIA (semana/sábado/domingo/feriado), detectado pela data + param_feriados. Ao marcar Pago, gera Saída no fluxo_caixa (grupo Despesa com Pessoal).",
+    "filiacao": "Pai/mãe/outro responsável ficam na ficha da CRIANÇA como campos de consulta. O vínculo financeiro (saldo/compras) é sempre o cod_responsavel."
+  }
+}

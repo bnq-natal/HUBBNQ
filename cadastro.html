@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cadastro — Brincar no Quintal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  .fld { width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:.85rem; background:#fff; }
+  .fld:focus { outline:2px solid #1e3a8a33; }
+  .lbl { font-size:.7rem; text-transform:uppercase; letter-spacing:.03em; color:#64748b; font-weight:600; }
+  ::-webkit-scrollbar { height:8px; width:8px; } ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
+</style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800">
+
+<main class="max-w-7xl mx-auto px-4 py-5">
+  <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+    <div class="flex gap-2 items-center flex-wrap">
+      <input type="text" id="busca" placeholder="🔎 nome, COD ou CPF…" class="fld !w-64">
+      <select id="fStatus" class="fld !w-36">
+        <option value="todos">Todos</option>
+        <option value="ativo">Ativos</option>
+        <option value="inativo">Inativos</option>
+      </select>
+      <label class="text-xs flex items-center gap-1"><input type="checkbox" id="fPendentes"> só pré-cadastros ("Resp. …")</label>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="abrirMesclar()" class="bg-slate-700 text-white text-sm px-4 py-2 rounded hover:bg-slate-600">🔗 Mesclar responsáveis</button>
+      <button onclick="abrirFichaResp(null)" class="bg-blue-900 text-white text-sm px-4 py-2 rounded hover:bg-blue-800">+ Novo responsável</button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <!-- Lista de responsáveis -->
+    <div class="bg-white rounded-lg border border-slate-200 overflow-y-auto max-h-[75vh]" id="listaResp"></div>
+    <!-- Detalhe -->
+    <div class="lg:col-span-2 space-y-4" id="detalhe">
+      <div class="bg-white rounded-lg border border-dashed border-slate-300 p-10 text-center text-slate-500">
+        Selecione um responsável para ver a ficha, as crianças e os saldos.
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="shared/api.js"></script>
+<script src="shared/auth.js"></script>
+<script src="shared/ui.js"></script>
+<script>
+if (AUTH.protegerPagina('cadastro')) {
+
+UI.montarHeader('👨‍👩‍👧 Cadastro — Responsáveis e Crianças');
+let codSelecionado = null;
+
+/* ============ CAMPOS DAS FICHAS ============ */
+const CAMPOS_RESP = [
+  ['Dados pessoais', [
+    ['nome','Nome completo','text','col-span-4'], ['cpf','CPF (opcional)','text','col-span-2'],
+    ['nascimento','Nascimento','date','col-span-2'],
+    ['sexo','Sexo','select:,M,F,Outro','col-span-1'],
+    ['estado_civil','Estado civil','select:,Solteiro(a),Casado(a),Divorciado(a),Viúvo(a),União estável','col-span-3'],
+  ]],
+  ['Contato', [
+    ['telefone','Telefone/WhatsApp','text','col-span-2'], ['telefone2','Telefone 2','text','col-span-2'],
+    ['email','E-mail','text','col-span-2'],
+    ['origem_lead','Como conheceu','select:,Instagram,Indicação,Patrocinado,Google,Festinha,Outros','col-span-2'],
+    ['cpf_nf','CPF p/ nota (se diferente)','text','col-span-2'],
+  ]],
+  ['Endereço', [
+    ['cep','CEP','text','col-span-1'], ['logradouro','Logradouro','text','col-span-3'],
+    ['numero','Nº','text','col-span-1'], ['complemento','Compl.','text','col-span-1'],
+    ['bairro','Bairro','text','col-span-2'], ['cidade','Cidade','text','col-span-3'], ['uf','UF','text','col-span-1'],
+  ]],
+  ['Dados bancários (devolução de saldo)', [
+    ['banco','Banco','text','col-span-2'], ['agencia','Agência','text','col-span-1'],
+    ['conta','Conta','text','col-span-1'], ['pix','PIX','text','col-span-2'],
+  ]],
+  ['Situação', [
+    ['status','Status','select:ativo,inativo','col-span-1'],
+    ['observacoes','Observações','textarea','col-span-5'],
+  ]],
+];
+
+const CAMPOS_CRIANCA = [
+  ['Identificação', [
+    ['nome','Nome completo','text','col-span-4'], ['nascimento','Nascimento','date','col-span-2'],
+    ['sexo','Sexo','select:,M,F,Outro','col-span-1'], ['cpf','CPF (se tiver)','text','col-span-2'],
+    ['aut_imagem','Autoriza imagem','select:,sim,nao','col-span-2'],
+  ]],
+  ['Escola', [
+    ['escola','Escola','text','col-span-3'], ['escolaridade','Ano/Série','text','col-span-1'],
+    ['turno_escola','Turno na escola','select:,Manhã,Tarde,Integral','col-span-2'],
+  ]],
+  ['Filiação (consulta)', [
+    ['nome_pai','Pai','text','col-span-3'], ['telefone_pai','Tel. pai','text','col-span-3'],
+    ['nome_mae','Mãe','text','col-span-3'], ['telefone_mae','Tel. mãe','text','col-span-3'],
+    ['outro_responsavel','Outro responsável (avó, tio…)','text','col-span-3'], ['telefone_outro','Tel. outro','text','col-span-3'],
+  ]],
+  ['Saúde', [
+    ['alergias','Alergias','text','col-span-3'], ['restricoes_alimentares','Restrições alimentares','text','col-span-3'],
+    ['obs_medicas','Observações médicas','textarea','col-span-6'],
+  ]],
+  ['Situação', [
+    ['status','Status','select:ativo,inativo','col-span-1'],
+  ]],
+];
+
+/* ============ SALDOS (Σ Contratado − Σ Realizado) ============ */
+function saldosDo(cod) {
+  const s = { Contraturno: 0, Colonia: 0 };
+  for (const m of API.tabela('movimentos'))
+    if (m.cod_responsavel === cod && s[m.programa] !== undefined) s[m.programa] += (+m.qtde || 0);
+  return s;
+}
+
+/* ============ LISTA ============ */
+function renderLista() {
+  const box = document.getElementById('listaResp');
+  const q = (document.getElementById('busca').value || '').toLowerCase();
+  const st = document.getElementById('fStatus').value;
+  const soPend = document.getElementById('fPendentes').checked;
+  let resps = [...API.tabela('responsaveis')].sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+  if (q) resps = resps.filter(r => (r.nome || '').toLowerCase().includes(q) || (r.cod || '').toLowerCase().includes(q) || (r.cpf || '').includes(q));
+  if (st !== 'todos') resps = resps.filter(r => (r.status || 'ativo') === st);
+  if (soPend) resps = resps.filter(r => (r.nome || '').startsWith('Resp.'));
+
+  const criancas = API.tabela('criancas');
+  box.innerHTML = resps.length ? resps.map(r => {
+    const filhos = criancas.filter(c => c.cod_responsavel === r.cod);
+    const sal = saldosDo(r.cod);
+    const pend = (r.nome || '').startsWith('Resp.');
+    return `<button onclick="selecionar('${r.cod}')" class="w-full text-left px-4 py-3 border-b border-slate-100 hover:bg-blue-50 ${codSelecionado === r.cod ? 'bg-blue-50' : ''}">
+      <p class="font-semibold text-sm">${UI.esc(r.nome)} ${pend ? '<span class="text-xs bg-amber-100 text-amber-700 px-1.5 rounded">pré-cadastro</span>' : ''}
+        ${(r.status === 'inativo') ? '<span class="text-xs bg-slate-200 text-slate-600 px-1.5 rounded">inativo</span>' : ''}</p>
+      <p class="text-xs text-slate-500">${r.cod} · ${r.cpf || 'sem CPF'} · ${filhos.length} criança(s)</p>
+      <p class="text-xs mt-0.5">
+        <span class="${sal.Contraturno < 0 ? 'text-red-600' : 'text-emerald-700'}">CT: ${UI.fmtNum(sal.Contraturno)}h</span> ·
+        <span class="${sal.Colonia < 0 ? 'text-red-600' : 'text-cyan-700'}">Colônia: ${UI.fmtNum(sal.Colonia)} turno(s)</span>
+      </p>
+    </button>`;
+  }).join('') : '<p class="p-6 text-slate-500 text-sm">Nenhum responsável no filtro.</p>';
+}
+
+/* ============ DETALHE ============ */
+function selecionar(cod) { codSelecionado = cod; renderLista(); renderDetalhe(); }
+
+function renderDetalhe() {
+  const box = document.getElementById('detalhe');
+  const r = API.tabela('responsaveis').find(x => x.cod === codSelecionado);
+  if (!r) { box.innerHTML = '<div class="bg-white rounded-lg border border-dashed border-slate-300 p-10 text-center text-slate-500">Selecione um responsável.</div>'; return; }
+  const filhos = API.tabela('criancas').filter(c => c.cod_responsavel === r.cod);
+  const sal = saldosDo(r.cod);
+
+  box.innerHTML = `
+    <article class="bg-white rounded-lg border border-slate-200 p-4">
+      <div class="flex justify-between items-start flex-wrap gap-2">
+        <div>
+          <h3 class="font-bold text-lg">${UI.esc(r.nome)}</h3>
+          <p class="text-xs text-slate-500">${r.cod} · CPF: ${r.cpf || '—'} · ${r.telefone || 'sem telefone'} · ${r.email || ''}</p>
+          <p class="text-xs text-slate-500">${[r.logradouro, r.numero, r.bairro, r.cidade && (r.cidade + '/' + (r.uf || ''))].filter(Boolean).join(', ') || 'endereço não informado'}</p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="abrirFichaResp('${r.cod}')" class="text-blue-800 text-xs underline">✏ editar ficha</button>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mt-3">
+        <div class="bg-emerald-50 border border-emerald-200 rounded p-3">
+          <p class="lbl">Saldo Contraturno</p>
+          <p class="text-xl font-bold ${sal.Contraturno < 0 ? 'text-red-600' : 'text-emerald-700'}">${UI.fmtNum(sal.Contraturno)} horas</p>
+        </div>
+        <div class="bg-cyan-50 border border-cyan-200 rounded p-3">
+          <p class="lbl">Saldo Colônia</p>
+          <p class="text-xl font-bold ${sal.Colonia < 0 ? 'text-red-600' : 'text-cyan-700'}">${UI.fmtNum(sal.Colonia)} turno(s) de 4h</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="bg-white rounded-lg border border-slate-200 p-4">
+      <div class="flex justify-between items-center mb-2">
+        <h3 class="font-semibold">Crianças vinculadas (${filhos.length})</h3>
+        <button onclick="abrirFichaCrianca(null)" class="bg-blue-900 text-white text-xs px-3 py-1.5 rounded hover:bg-blue-800">+ Adicionar criança</button>
+      </div>
+      ${filhos.length ? `<table class="w-full text-sm">
+        <thead class="text-xs text-slate-500 uppercase"><tr>
+          <th class="text-left py-1">Nome</th><th class="text-left">Nascimento</th><th class="text-left">Escola / Turno</th>
+          <th class="text-left">Filiação</th><th class="text-center">Status</th><th></th></tr></thead>
+        <tbody>${filhos.map(c => `<tr class="border-t border-slate-100">
+          <td class="py-2 font-semibold">${UI.esc(c.nome)}</td>
+          <td>${c.nascimento || '—'}</td>
+          <td class="text-xs">${UI.esc(c.escola || '—')}<br>${c.turno_escola || ''}</td>
+          <td class="text-xs">${[c.nome_pai && '👨 ' + c.nome_pai, c.nome_mae && '👩 ' + c.nome_mae, c.outro_responsavel && '🤝 ' + c.outro_responsavel].filter(Boolean).map(UI.esc).join('<br>') || '—'}</td>
+          <td class="text-center">${c.status === 'inativo' ? '<span class="text-xs bg-slate-200 px-1.5 rounded">inativo</span>' : '<span class="text-xs bg-green-100 text-green-700 px-1.5 rounded">ativo</span>'}</td>
+          <td class="text-right"><button onclick="abrirFichaCrianca('${c.id_crianca}')" class="text-blue-800 text-xs underline">editar</button></td>
+        </tr>`).join('')}</tbody></table>`
+      : '<p class="text-sm text-slate-400">Nenhuma criança vinculada ainda.</p>'}
+    </article>`;
+}
+
+/* ============ FORMULÁRIOS ============ */
+function montarForm(secoes, obj) {
+  let html = '';
+  for (const [secao, campos] of secoes) {
+    html += `<p class="lbl mt-4 mb-1 border-b border-slate-200 pb-1">${secao}</p><div class="grid grid-cols-6 gap-2">`;
+    for (const [key, label, tipo, span] of campos) {
+      const val = obj[key] ?? '';
+      html += `<div class="${span}"><span class="lbl">${label}</span>`;
+      if (tipo === 'textarea') html += `<textarea class="fld" rows="2" id="f_${key}">${UI.esc(val)}</textarea>`;
+      else if (tipo.startsWith('select:')) {
+        const ops = tipo.slice(7).split(',');
+        html += `<select class="fld" id="f_${key}">${ops.map(o => `<option value="${o}" ${o === val ? 'selected' : ''}>${o || '—'}</option>`).join('')}</select>`;
+      } else html += `<input type="${tipo}" class="fld" id="f_${key}" value="${UI.esc(val)}">`;
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+  return html;
+}
+function lerForm(secoes, base) {
+  const novo = { ...base };
+  for (const [, campos] of secoes)
+    for (const [key] of campos) {
+      const el = document.getElementById('f_' + key);
+      if (el) novo[key] = el.value.trim();
+    }
+  return novo;
+}
+
+// ---------- Responsável ----------
+function abrirFichaResp(cod) {
+  const r = cod ? API.tabela('responsaveis').find(x => x.cod === cod) : { status: 'ativo' };
+  UI.modal(`<div class="p-5">
+    <div class="flex justify-between items-center mb-1">
+      <h3 class="font-bold text-lg">${cod ? '✏ Editar' : '➕ Novo'} responsável ${cod ? '<span class="text-xs text-slate-400">' + cod + '</span>' : ''}</h3>
+      <button onclick="UI.fecharModal()" class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
+    </div>
+    ${cod ? '' : '<p class="text-xs text-slate-500">O código (RESP-XXXX) é gerado automaticamente. CPF pode ficar vazio e ser preenchido depois.</p>'}
+    ${montarForm(CAMPOS_RESP, r)}
+    <div class="flex justify-end gap-2 mt-5">
+      <button onclick="salvarResp('${cod || ''}')" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">💾 Salvar</button>
+    </div></div>`, 'max-w-3xl');
+}
+
+async function salvarResp(cod) {
+  const base = cod ? API.tabela('responsaveis').find(x => x.cod === cod) : {};
+  const novo = lerForm(CAMPOS_RESP, base);
+  if (!novo.nome) { UI.toast('Informe o nome.', 'erro'); return; }
+  if (cod) novo.cod = cod;
+  UI.syncBusy();
+  try {
+    const r = await API.upsert('responsaveis', novo);
+    if (!r.ok) throw new Error(r.erro);
+    codSelecionado = r.registro.cod;
+    UI.fecharModal(); UI.syncOk(); UI.toast('Responsável salvo.', 'ok');
+    renderLista(); renderDetalhe();
+  } catch (e) { UI.syncErr(); UI.toast('Erro: ' + e.message, 'erro'); }
+}
+
+// ---------- Criança ----------
+function abrirFichaCrianca(id) {
+  if (!codSelecionado && !id) { UI.toast('Selecione um responsável primeiro.', 'erro'); return; }
+  const c = id ? API.tabela('criancas').find(x => x.id_crianca === id) : { status: 'ativo' };
+  UI.modal(`<div class="p-5">
+    <div class="flex justify-between items-center mb-1">
+      <h3 class="font-bold text-lg">${id ? '✏ Editar' : '➕ Nova'} criança</h3>
+      <button onclick="UI.fecharModal()" class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
+    </div>
+    <p class="text-xs text-slate-500">Vinculada a: <b>${UI.esc((API.tabela('responsaveis').find(x => x.cod === (c.cod_responsavel || codSelecionado)) || {}).nome || '')}</b></p>
+    ${montarForm(CAMPOS_CRIANCA, c)}
+    <div class="flex justify-between items-center mt-5">
+      ${id ? `<button onclick="moverCrianca('${id}')" class="text-slate-600 text-xs underline">↔ mover para outro responsável</button>` : '<span></span>'}
+      <button onclick="salvarCrianca('${id || ''}')" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">💾 Salvar</button>
+    </div></div>`, 'max-w-3xl');
+}
+
+async function salvarCrianca(id) {
+  const base = id ? API.tabela('criancas').find(x => x.id_crianca === id) : { cod_responsavel: codSelecionado };
+  const novo = lerForm(CAMPOS_CRIANCA, base);
+  if (!novo.nome) { UI.toast('Informe o nome.', 'erro'); return; }
+  if (id) novo.id_crianca = id; else novo.id = undefined;
+  UI.syncBusy();
+  try {
+    // criancas usa id como chave no backend genérico
+    novo.id = novo.id_crianca || undefined;
+    const r = await API.upsert('criancas', novo);
+    if (!r.ok) throw new Error(r.erro);
+    if (!novo.id_crianca) { r.registro.id_crianca = r.registro.id; await API.upsert('criancas', r.registro); }
+    UI.fecharModal(); UI.syncOk(); UI.toast('Criança salva.', 'ok');
+    renderLista(); renderDetalhe();
+  } catch (e) { UI.syncErr(); UI.toast('Erro: ' + e.message, 'erro'); }
+}
+
+function moverCrianca(id) {
+  const resps = [...API.tabela('responsaveis')].sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+  UI.modal(`<div class="p-5">
+    <h3 class="font-bold mb-2">↔ Mover criança para outro responsável</h3>
+    <select id="destinoMover" class="fld mb-4">${resps.map(r => `<option value="${r.cod}" ${r.cod === codSelecionado ? 'disabled' : ''}>${UI.esc(r.nome)} (${r.cod})</option>`).join('')}</select>
+    <div class="text-right"><button onclick="confirmarMover('${id}')" class="bg-blue-900 text-white text-sm px-5 py-2 rounded">Mover</button></div>
+  </div>`, 'max-w-md');
+}
+async function confirmarMover(id) {
+  const destino = document.getElementById('destinoMover').value;
+  const c = API.tabela('criancas').find(x => x.id_crianca === id);
+  c.cod_responsavel = destino; c.id = c.id_crianca;
+  UI.syncBusy();
+  const r = await API.upsert('criancas', c);
+  if (r.ok) { UI.fecharModal(); UI.syncOk(); UI.toast('Criança movida.', 'ok'); selecionar(destino); }
+  else { UI.syncErr(); UI.toast('Erro: ' + r.erro, 'erro'); }
+}
+
+/* ============ MESCLAR RESPONSÁVEIS (migração) ============ */
+// Junta dois pré-cadastros no mesmo pai: crianças, movimentos, festinhas e
+// conversões migram para o COD sobrevivente; saldos se somam naturalmente.
+function abrirMesclar() {
+  const resps = [...API.tabela('responsaveis')].sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+  const ops = resps.map(r => `<option value="${r.cod}">${UI.esc(r.nome)} (${r.cod})</option>`).join('');
+  UI.modal(`<div class="p-5">
+    <h3 class="font-bold text-lg mb-1">🔗 Mesclar responsáveis</h3>
+    <p class="text-xs text-slate-500 mb-4">Use quando duas fichas são o mesmo pai/mãe (ex.: pré-cadastros "Resp. Cecilia" e "Resp. Luiz" que são irmãos). Tudo do ORIGEM (crianças, saldos, compras, festinhas) passa para o DESTINO, e o ORIGEM é excluído. <b>Ação irreversível.</b></p>
+    <span class="lbl">Origem (será excluído)</span>
+    <select id="mescOrigem" class="fld mb-3">${ops}</select>
+    <span class="lbl">Destino (recebe tudo)</span>
+    <select id="mescDestino" class="fld mb-4">${ops}</select>
+    <div class="text-right"><button onclick="confirmarMesclar()" class="bg-red-700 text-white text-sm px-5 py-2 rounded hover:bg-red-600">Mesclar</button></div>
+  </div>`, 'max-w-md');
+}
+
+async function confirmarMesclar() {
+  const origem = document.getElementById('mescOrigem').value;
+  const destino = document.getElementById('mescDestino').value;
+  if (origem === destino) { UI.toast('Origem e destino são o mesmo.', 'erro'); return; }
+  const s = API.get();
+  const rO = s.responsaveis.find(x => x.cod === origem);
+  const rD = s.responsaveis.find(x => x.cod === destino);
+  if (!confirm(`Mesclar "${rO.nome}" → "${rD.nome}"?\nTudo será transferido e "${rO.nome}" será excluído.`)) return;
+
+  // reatribui todas as referências
+  for (const t of ['criancas', 'movimentos', 'festinhas', 'agendamentos', 'conversoes_saldo'])
+    for (const reg of (s[t] || []))
+      if (reg.cod_responsavel === origem) reg.cod_responsavel = destino;
+  // dados úteis do origem que o destino não tem
+  for (const k of ['cpf', 'telefone', 'email', 'pix']) if (!rD[k] && rO[k]) rD[k] = rO[k];
+  s.responsaveis = s.responsaveis.filter(x => x.cod !== origem);
+
+  UI.syncBusy();
+  try {
+    await API.enviar();
+    UI.fecharModal(); UI.syncOk(); UI.toast('Mesclagem concluída.', 'ok');
+    selecionar(destino);
+  } catch (e) { UI.syncErr(); UI.toast('Erro ao salvar: ' + e.message, 'erro'); }
+}
+
+/* ============ BOOT ============ */
+['busca', 'fStatus', 'fPendentes'].forEach(id =>
+  document.getElementById(id).addEventListener(id === 'busca' ? 'input' : 'change', renderLista));
+
+(async () => {
+  API.carregarLocal();
+  UI.syncBusy();
+  try { await API.baixar(); UI.syncOk(); } catch (e) { UI.syncErr(); }
+  renderLista();
+})();
+
+} // fim protegerPagina
+</script>
+</body>
+</html>
