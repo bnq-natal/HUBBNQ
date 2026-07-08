@@ -1,14 +1,13 @@
 /* ============================================================
    shared/api.js — Camada de acesso ao backend (Apps Script)
-   Usada por TODOS os módulos. Concentra: config nuvem, token,
-   chamadas, e cache local (localStorage) com sincronização.
+   v2: redirect:'follow' no fetch para evitar o echo redirect do GAS
    ============================================================ */
 const API = (() => {
-  const LS_STATE = 'bq_state';       // cache do banco
-  const LS_URL   = 'bq_apiUrl';      // URL do Web App (por dispositivo)
-  const LS_TOKEN = 'bq_appToken';    // token de app (por dispositivo)
+  const LS_STATE = 'bq_state';
+  const LS_URL   = 'bq_apiUrl';
+  const LS_TOKEN = 'bq_appToken';
 
-  let state = null;                  // banco em memória
+  let state = null;
   let syncTimer = null;
 
   const cfg = () => ({ url: localStorage.getItem(LS_URL) || '',
@@ -20,16 +19,20 @@ const API = (() => {
     localStorage.setItem(LS_TOKEN, token.trim());
   }
 
-  // POST texto simples (evita preflight CORS no Apps Script)
+  // redirect:'follow' é obrigatório — o Apps Script faz redirect antes de responder
   async function chamar(payload) {
     const c = cfg();
     if (!c.url) throw new Error('Backend não configurado');
-    const resp = await fetch(c.url, { method: 'POST',
-      body: JSON.stringify({ ...payload, token: c.token }) });
-    return resp.json();
+    const resp = await fetch(c.url, {
+      method: 'POST',
+      redirect: 'follow',
+      body: JSON.stringify({ ...payload, token: c.token })
+    });
+    const txt = await resp.text();
+    try { return JSON.parse(txt); }
+    catch (e) { throw new Error('Resposta inválida do backend: ' + txt.slice(0, 120)); }
   }
 
-  // ---- Estado local (cache) ----
   function carregarLocal() {
     try { state = JSON.parse(localStorage.getItem(LS_STATE)) || null; } catch { state = null; }
     return state;
@@ -38,7 +41,6 @@ const API = (() => {
   function get() { return state; }
   function tabela(nome) { return (state && state[nome]) || []; }
 
-  // ---- Sincronização ----
   async function baixar() {
     const r = await chamar({ action: 'load' });
     if (r.ok && r.state) { state = r.state; gravarLocal(); return state; }
@@ -54,7 +56,6 @@ const API = (() => {
     return r;
   }
 
-  // Debounce: várias edições viram 1 gravação
   function agendarEnvio(cb) {
     gravarLocal();
     clearTimeout(syncTimer);
@@ -64,12 +65,10 @@ const API = (() => {
     }, 1200);
   }
 
-  // ---- Operações de alto nível (usadas pelos módulos) ----
-  // upsert local + sincroniza; o backend gera COD para responsaveis/brincantes
   async function upsert(nomeTabela, registro) {
     const usuario = AUTH.usuarioAtual();
     const r = await chamar({ action: 'upsert', tabela: nomeTabela, registro, usuario });
-    if (r.ok) { await baixar(); }   // recarrega p/ pegar COD gerado
+    if (r.ok) await baixar();
     return r;
   }
   async function remover(nomeTabela, id) {
