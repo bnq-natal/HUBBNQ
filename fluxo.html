@@ -305,12 +305,14 @@ function limpar() { ['fAno', 'fMes', 'fTipo', 'fGrupo', 'fConta'].forEach(id => 
 ['fAno', 'fMes', 'fTipo', 'fGrupo', 'fConta'].forEach(id => document.getElementById(id).addEventListener('change', render));
 document.getElementById('fBusca').addEventListener('input', render);
 
-(async () => {
-  API.carregarLocal();
-  UI.syncBusy();
-  try { await API.baixar(); UI.syncOk(); } catch (e) { UI.syncErr(); }
-  preencherFiltros(); render();
-})();
+
+/* expõe funções usadas por onclick em HTML gerado */
+window.abrirLanc = abrirLanc; window.salvarLanc = salvarLanc; window.excluir = excluir;
+window.exportarCSV = exportarCSV; window.limpar = limpar;
+window.atualizaContas = atualizaContas; window.toggleVenda = toggleVenda; window.autoPreencheVenda = autoPreencheVenda;
+
+API.abrirRapido((ok) => { ok ? UI.syncOk() : UI.syncErr(); preencherFiltros(); render(); });
+preencherFiltros(); render(); // pinta já com cache local
 
 } // fim protegerPagina
 </script>

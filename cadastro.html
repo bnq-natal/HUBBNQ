@@ -386,12 +386,8 @@ window.selecionar        = selecionar;
 ['busca','fStatus','fPendentes'].forEach(id =>
   document.getElementById(id).addEventListener(id === 'busca' ? 'input' : 'change', renderLista));
 
-(async () => {
-  API.carregarLocal();
-  UI.syncBusy();
-  try { await API.baixar(); UI.syncOk(); } catch (e) { UI.syncErr(); }
-  renderLista();
-})();
+API.abrirRapido((ok) => { ok ? UI.syncOk() : UI.syncErr(); renderLista(); if (codSelecionado) renderDetalhe(); });
+renderLista(); // pinta já com o cache local
 
 } // fim else
 </script>

@@ -329,12 +329,16 @@ async function setValor(funcao, tipo, valor) {
 ['eAno', 'eMes', 'eStatus', 'eBrinc'].forEach(id => document.getElementById(id).addEventListener('change', renderEscala));
 document.getElementById('qEquipe').addEventListener('input', renderEquipe);
 
-(async () => {
-  API.carregarLocal();
-  UI.syncBusy();
-  try { await API.baixar(); UI.syncOk(); } catch (e) { UI.syncErr(); }
-  preencherFiltrosEscala(); renderEscala();
-})();
+
+/* expõe funções usadas por onclick */
+window.abrirEscala = abrirEscala; window.salvarEscala = salvarEscala; window.excluirEscala = excluirEscala;
+window.pagarSelecionados = pagarSelecionados; window.toggleSel = toggleSel; window.toggleAll = toggleAll;
+window.ajustaFuncoes = ajustaFuncoes; window.previewValor = previewValor;
+window.abrirBrincante = abrirBrincante; window.salvarBrincante = salvarBrincante; window.excluirBrincante = excluirBrincante;
+window.setValor = setValor;
+
+API.abrirRapido((ok) => { ok ? UI.syncOk() : UI.syncErr(); preencherFiltrosEscala(); renderEscala(); });
+preencherFiltrosEscala(); renderEscala(); // cache local
 
 } // fim protegerPagina
 </script>

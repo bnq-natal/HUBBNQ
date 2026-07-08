@@ -23,13 +23,13 @@
         <option value="Contraturno">Só Contraturno</option>
         <option value="Colonia">Só Colônia</option>
       </select>
-      <label class="text-xs flex items-center gap-1"><input type="checkbox" id="fSaldo"> só com saldo &gt; 0</label>
+      <label class="text-xs flex items-center gap-1 cursor-pointer"><input type="checkbox" id="fSaldo"> só com saldo &gt; 0</label>
     </div>
     <button onclick="abrirConverter()" class="bg-slate-700 text-white text-sm px-4 py-2 rounded hover:bg-slate-600">🔄 Converter saldo</button>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-    <div class="bg-white rounded-lg border border-slate-200 overflow-y-auto max-h-[75vh]" id="listaResp"></div>
+    <div class="bg-white rounded-lg border border-slate-200 overflow-y-auto max-h-[72vh]" id="listaResp"></div>
     <div class="lg:col-span-2 space-y-4" id="detalhe">
       <div class="bg-white rounded-lg border border-dashed border-slate-300 p-10 text-center text-slate-500">
         Selecione um responsável para ver saldos e registrar consumo.
@@ -42,19 +42,16 @@
 <script src="shared/auth.js"></script>
 <script src="shared/ui.js"></script>
 <script>
-if (AUTH.protegerPagina('contraturno')) {
+if (!API.configurada() || !AUTH.logado()) { location.href = 'index.html'; }
+else {
 
 UI.montarHeader('🎨 Créditos — Contraturno & Colônia');
 let codSel = null;
-
 const UNI = { Contraturno: 'h', Colonia: 'turno(s)' };
 
-/* ============ SALDOS ============ */
 function movsDo(cod) { return API.tabela('movimentos').filter(m => m.cod_responsavel === cod); }
-function saldo(cod, prog) {
-  return movsDo(cod).filter(m => m.programa === prog).reduce((s, m) => s + (+m.qtde || 0), 0);
-}
-function temQualquerSaldo(cod) { return saldo(cod, 'Contraturno') > 0 || saldo(cod, 'Colonia') > 0; }
+function saldo(cod, prog) { return movsDo(cod).filter(m => m.programa === prog).reduce((s, m) => s + (+m.qtde || 0), 0); }
+function temSaldo(cod) { return saldo(cod, 'Contraturno') > 0 || saldo(cod, 'Colonia') > 0; }
 
 /* ============ LISTA ============ */
 function renderLista() {
@@ -65,7 +62,7 @@ function renderLista() {
   let resps = [...API.tabela('responsaveis')].sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
   if (q) resps = resps.filter(r => (r.nome || '').toLowerCase().includes(q) ||
     criancas.some(c => c.cod_responsavel === r.cod && (c.nome || '').toLowerCase().includes(q)));
-  if (soSaldo) resps = resps.filter(r => temQualquerSaldo(r.cod));
+  if (soSaldo) resps = resps.filter(r => temSaldo(r.cod));
 
   box.innerHTML = resps.length ? resps.map(r => {
     const ct = saldo(r.cod, 'Contraturno'), co = saldo(r.cod, 'Colonia');
@@ -74,11 +71,10 @@ function renderLista() {
       <p class="text-xs mt-0.5">
         <span class="${ct < 0 ? 'text-red-600' : ct > 0 ? 'text-emerald-700' : 'text-slate-400'}">CT ${UI.fmtNum(ct)}h</span> ·
         <span class="${co < 0 ? 'text-red-600' : co > 0 ? 'text-cyan-700' : 'text-slate-400'}">Col ${UI.fmtNum(co)} turno(s)</span>
-      </p>
-    </button>`;
+      </p></button>`;
   }).join('') : '<p class="p-6 text-slate-500 text-sm">Nenhum responsável no filtro.</p>';
 }
-function selecionar(cod) { codSel = cod; renderLista(); renderDetalhe(); }
+window.selecionar = function(cod) { codSel = cod; renderLista(); renderDetalhe(); };
 
 /* ============ DETALHE ============ */
 function renderDetalhe() {
@@ -88,8 +84,8 @@ function renderDetalhe() {
   const filhos = API.tabela('criancas').filter(c => c.cod_responsavel === r.cod);
   const ct = saldo(r.cod, 'Contraturno'), co = saldo(r.cod, 'Colonia');
   const progFiltro = document.getElementById('fPrograma').value;
-  let movs = movsDo(r.cod).filter(m => progFiltro === 'todos' || m.programa === progFiltro);
-  movs = movs.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+  let movs = movsDo(r.cod).filter(m => progFiltro === 'todos' || m.programa === progFiltro)
+    .sort((a, b) => (b.data || '').localeCompare(a.data || ''));
 
   box.innerHTML = `
     <article class="bg-white rounded-lg border border-slate-200 p-4">
@@ -109,7 +105,6 @@ function renderDetalhe() {
         </div>
       </div>
     </article>
-
     <article class="bg-white rounded-lg border border-slate-200 overflow-x-auto">
       <h3 class="font-semibold px-4 pt-3">Extrato de movimentos</h3>
       <table class="w-full text-sm mt-2">
@@ -128,137 +123,118 @@ function renderDetalhe() {
     </article>`;
 }
 
-/* ============ REGISTRAR CONSUMO (Realizado, negativo) ============ */
-function abrirConsumo() {
+/* ============ REGISTRAR CONSUMO (com busca de criança) ============ */
+let acConsumo = null;
+window.abrirConsumo = function() {
   const r = API.tabela('responsaveis').find(x => x.cod === codSel);
   const filhos = API.tabela('criancas').filter(c => c.cod_responsavel === r.cod);
   if (!filhos.length) { UI.toast('Cadastre uma criança para este responsável primeiro.', 'erro'); return; }
   UI.modal(`<div class="p-5">
     <h3 class="font-bold text-lg mb-1">− Registrar consumo</h3>
-    <p class="text-xs text-slate-500 mb-3">Responsável: <b>${UI.esc(r.nome)}</b>. O consumo abate do saldo (fica no responsável), mas registra qual criança usou.</p>
+    <p class="text-xs text-slate-500 mb-3">Responsável: <b>${UI.esc(r.nome)}</b>. O consumo abate do saldo do responsável, registrando qual criança usou.</p>
     <div class="grid grid-cols-6 gap-2">
       <div class="col-span-2"><span class="lbl">Data</span><input type="date" id="c_data" class="fld" value="${UI.hoje()}"></div>
       <div class="col-span-2"><span class="lbl">Programa</span><select id="c_prog" class="fld" onchange="ajustaUnidade()">
         <option value="Contraturno">🎨 Contraturno (horas)</option><option value="Colonia">🏖️ Colônia (turnos 4h)</option></select></div>
       <div class="col-span-2"><span class="lbl">Turno</span><select id="c_turno" class="fld"><option>Manhã</option><option>Tarde</option><option>Integral</option></select></div>
-      <div class="col-span-4"><span class="lbl">Criança</span><select id="c_crianca" class="fld">${filhos.map(f => `<option value="${f.id_crianca}">${UI.esc(f.nome)}</option>`).join('')}</select></div>
+      <div class="col-span-4"><span class="lbl">Criança (digite para buscar)</span><div id="c_crianca_ac"></div></div>
       <div class="col-span-2"><span class="lbl" id="c_lblqtd">Qtde (horas)</span><input type="number" step="0.5" id="c_qtde" class="fld" placeholder="ex: 2"></div>
       <div class="col-span-6"><span class="lbl">Observações</span><input id="c_obs" class="fld" placeholder="ex: entrou 14h, saiu 18h"></div>
     </div>
     <div class="flex justify-end gap-2 mt-4">
       <button onclick="salvarConsumo()" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">💾 Registrar</button>
     </div></div>`, 'max-w-2xl');
-}
-function ajustaUnidade() {
+  // autocomplete de criança (só filhos deste responsável)
+  acConsumo = UI.autocomplete(document.getElementById('c_crianca_ac'), filhos, {
+    placeholder: 'nome da criança…', label: c => c.nome, sub: c => c.turno_escola || '' });
+};
+window.ajustaUnidade = function() {
   const p = document.getElementById('c_prog').value;
   document.getElementById('c_lblqtd').textContent = p === 'Colonia' ? 'Qtde (turnos)' : 'Qtde (horas)';
-}
-async function salvarConsumo() {
+};
+window.salvarConsumo = async function() {
   const g = k => document.getElementById('c_' + k).value;
   const qtde = +g('qtde');
   if (!qtde || qtde <= 0) { UI.toast('Informe a quantidade consumida.', 'erro'); return; }
-  const crianca = API.tabela('criancas').find(c => c.id_crianca === g('crianca'));
-  const mov = {
-    data: g('data'), cod_responsavel: codSel, programa: g('prog'), tipo_entrada: 'Realizado',
-    id_crianca: g('crianca'), nome_crianca: crianca ? crianca.nome : '',
-    qtde: -Math.abs(qtde), turno: g('turno'), observacoes: g('obs')
-  };
+  const crianca = acConsumo && acConsumo.get();
+  if (!crianca) { UI.toast('Busque e selecione a criança.', 'erro'); return; }
+  const mov = { data: g('data'), cod_responsavel: codSel, programa: g('prog'), tipo_entrada: 'Realizado',
+    id_crianca: crianca.id_crianca, nome_crianca: crianca.nome, qtde: -Math.abs(qtde),
+    turno: g('turno'), observacoes: g('obs') };
   UI.syncBusy();
   try {
     const r = await API.upsert('movimentos', mov);
     if (!r.ok) throw new Error(r.erro);
-    UI.fecharModal(); UI.syncOk(); UI.toast('Consumo registrado.', 'ok');
+    UI.fecharModal(); UI.syncOk(); UI.toast('Consumo registrado ✔', 'ok');
     renderLista(); renderDetalhe();
   } catch (e) { UI.syncErr(); UI.toast('Erro: ' + e.message, 'erro'); }
-}
+};
 
-/* ============ CONVERSÃO DE SALDO (proporcional ao preço de tabela) ============ */
+/* ============ CONVERSÃO ============ */
 function precoUnit(programa) {
-  // Contraturno = R$/hora (valor_pacote / horas). Colônia = R$/turno.
   const pk = API.tabela('param_pacotes');
-  if (programa === 'Colonia') {
-    const c = pk.find(p => (p.programa === 'Colonia'));
-    return c ? (+c['valor_R$'] || +c.preco_unit_R$ || 0) : 0;
-  }
-  // contraturno: média de preço/hora dos pacotes de horas com valor preenchido
+  if (programa === 'Colonia') { const c = pk.find(p => p.programa === 'Colonia'); return c ? (+c['valor_R$'] || 0) : 0; }
   const hs = pk.filter(p => p.programa === 'Contraturno' && +p['valor_R$'] > 0 && +p.qtd_horas_ou_turnos > 0);
   if (!hs.length) return 0;
   return hs.reduce((s, p) => s + (+p['valor_R$'] / +p.qtd_horas_ou_turnos), 0) / hs.length;
 }
-
-function abrirConverter() {
+window.abrirConverter = function() {
   if (!codSel) { UI.toast('Selecione um responsável primeiro.', 'erro'); return; }
   const r = API.tabela('responsaveis').find(x => x.cod === codSel);
   const ct = saldo(codSel, 'Contraturno'), co = saldo(codSel, 'Colonia');
   const pCT = precoUnit('Contraturno'), pCol = precoUnit('Colonia');
-  const avisoPreco = (!pCT || !pCol)
-    ? '<p class="text-xs text-red-600 mt-1">⚠ Preencha os valores em param_pacotes (via importação/admin) para a conversão calcular corretamente. Preços atuais: CT R$' + UI.fmtNum(pCT) + '/h · Colônia R$' + UI.fmtNum(pCol) + '/turno.</p>'
-    : '<p class="text-xs text-slate-500 mt-1">Preços de tabela: Contraturno R$' + UI.fmtNum(pCT) + '/h · Colônia R$' + UI.fmtNum(pCol) + '/turno (4h).</p>';
+  const aviso = (!pCT || !pCol)
+    ? `<p class="text-xs text-red-600 mt-1">⚠ Preencha os valores em param_pacotes (Admin/importação) para converter. Atuais: CT R$${UI.fmtNum(pCT)}/h · Colônia R$${UI.fmtNum(pCol)}/turno.</p>`
+    : `<p class="text-xs text-slate-500 mt-1">Preços de tabela: CT R$${UI.fmtNum(pCT)}/h · Colônia R$${UI.fmtNum(pCol)}/turno (4h).</p>`;
   UI.modal(`<div class="p-5">
     <h3 class="font-bold text-lg mb-1">🔄 Converter saldo</h3>
-    <p class="text-xs text-slate-500">Responsável: <b>${UI.esc(r.nome)}</b> · Saldos: CT ${UI.fmtNum(ct)}h · Colônia ${UI.fmtNum(co)} turno(s).</p>
-    ${avisoPreco}
+    <p class="text-xs text-slate-500">Responsável: <b>${UI.esc(r.nome)}</b> · CT ${UI.fmtNum(ct)}h · Colônia ${UI.fmtNum(co)} turno(s).</p>${aviso}
     <div class="grid grid-cols-6 gap-2 mt-3">
       <div class="col-span-3"><span class="lbl">De (origem)</span><select id="cv_origem" class="fld" onchange="calcConversao()">
         <option value="Colonia">🏖️ Colônia → 🎨 Contraturno</option>
         <option value="Contraturno">🎨 Contraturno → 🏖️ Colônia</option></select></div>
-      <div class="col-span-3"><span class="lbl">Qtde a converter (na origem)</span><input type="number" step="0.5" id="cv_qtde" class="fld" oninput="calcConversao()" placeholder="ex: 2"></div>
+      <div class="col-span-3"><span class="lbl">Qtde a converter (origem)</span><input type="number" step="0.5" id="cv_qtde" class="fld" oninput="calcConversao()" placeholder="ex: 2"></div>
     </div>
-    <div class="bg-blue-50 border border-blue-200 rounded p-3 mt-3 text-sm" id="cv_preview">Informe a quantidade para ver o resultado.</div>
-    <div class="flex justify-end gap-2 mt-4">
-      <button onclick="confirmarConversao()" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">Converter</button>
-    </div></div>`, 'max-w-2xl');
-}
-
-function dadosConversao() {
+    <div class="bg-blue-50 border border-blue-200 rounded p-3 mt-3 text-sm" id="cv_preview">Informe a quantidade.</div>
+    <div class="flex justify-end gap-2 mt-4"><button onclick="confirmarConversao()" class="bg-blue-900 text-white text-sm px-5 py-2 rounded hover:bg-blue-800">Converter</button></div>
+  </div>`, 'max-w-2xl');
+};
+function dadosConv() {
   const origem = document.getElementById('cv_origem').value;
   const destino = origem === 'Colonia' ? 'Contraturno' : 'Colonia';
   const qtde = +document.getElementById('cv_qtde').value || 0;
   const pOrig = precoUnit(origem), pDest = precoUnit(destino);
-  const valor = qtde * pOrig;
-  const qtdeDest = pDest ? valor / pDest : 0;
-  return { origem, destino, qtde, pOrig, pDest, valor, qtdeDest };
+  return { origem, destino, qtde, pOrig, pDest, valor: qtde * pOrig, qtdeDest: pDest ? (qtde * pOrig) / pDest : 0 };
 }
-function calcConversao() {
-  const d = dadosConversao();
-  const box = document.getElementById('cv_preview');
-  if (!d.qtde) { box.textContent = 'Informe a quantidade para ver o resultado.'; return; }
-  if (!d.pOrig || !d.pDest) { box.innerHTML = '<span class="text-red-600">Preços não configurados — não é possível converter.</span>'; return; }
+window.calcConversao = function() {
+  const d = dadosConv(); const box = document.getElementById('cv_preview');
+  if (!d.qtde) { box.textContent = 'Informe a quantidade.'; return; }
+  if (!d.pOrig || !d.pDest) { box.innerHTML = '<span class="text-red-600">Preços não configurados.</span>'; return; }
   const uO = d.origem === 'Colonia' ? 'turno(s)' : 'h', uD = d.destino === 'Colonia' ? 'turno(s)' : 'h';
-  box.innerHTML = `Convertendo <b>${UI.fmtNum(d.qtde)} ${uO}</b> de ${d.origem}
-    → valor R$ ${UI.fmtNum(d.valor)}
-    → <b class="text-blue-800">${UI.fmtNum(d.qtdeDest)} ${uD}</b> de ${d.destino}.
-    <br><span class="text-xs text-slate-500">O valor em reais é preservado na troca.</span>`;
-}
-async function confirmarConversao() {
-  const d = dadosConversao();
+  box.innerHTML = `Convertendo <b>${UI.fmtNum(d.qtde)} ${uO}</b> de ${d.origem} → R$ ${UI.fmtNum(d.valor)} → <b class="text-blue-800">${UI.fmtNum(d.qtdeDest)} ${uD}</b> de ${d.destino}.<br><span class="text-xs text-slate-500">Valor em reais preservado.</span>`;
+};
+window.confirmarConversao = async function() {
+  const d = dadosConv();
   if (!d.qtde || !d.pOrig || !d.pDest) { UI.toast('Verifique quantidade e preços.', 'erro'); return; }
-  const saldoOrig = saldo(codSel, d.origem);
-  if (d.qtde > saldoOrig && !confirm(`Saldo de origem é ${UI.fmtNum(saldoOrig)}. Converter ${UI.fmtNum(d.qtde)} deixará negativo. Continuar?`)) return;
+  if (d.qtde > saldo(codSel, d.origem) && !confirm('Isso deixará o saldo de origem negativo. Continuar?')) return;
   UI.syncBusy();
   try {
-    const r = await API.converterSaldo({
-      cod_responsavel: codSel, origem: d.origem, destino: d.destino,
-      qtde_origem: d.qtde, preco_unit_origem: d.pOrig, preco_unit_destino: d.pDest
-    });
+    const r = await API.converterSaldo({ cod_responsavel: codSel, origem: d.origem, destino: d.destino,
+      qtde_origem: d.qtde, preco_unit_origem: d.pOrig, preco_unit_destino: d.pDest });
     if (!r.ok) throw new Error(r.erro);
-    UI.fecharModal(); UI.syncOk(); UI.toast('Convertido: ' + UI.fmtNum(r.qtde_destino) + ' no destino.', 'ok');
+    UI.fecharModal(); UI.syncOk(); UI.toast('Convertido: ' + UI.fmtNum(r.qtde_destino) + ' no destino ✔', 'ok');
     renderLista(); renderDetalhe();
   } catch (e) { UI.syncErr(); UI.toast('Erro: ' + e.message, 'erro'); }
-}
+};
 
-/* ============ BOOT ============ */
+/* ============ BOOT (cache-first) ============ */
 ['busca', 'fPrograma', 'fSaldo'].forEach(id =>
   document.getElementById(id).addEventListener(id === 'busca' ? 'input' : 'change', () => { renderLista(); if (codSel) renderDetalhe(); }));
 
-(async () => {
-  API.carregarLocal();
-  UI.syncBusy();
-  try { await API.baixar(); UI.syncOk(); } catch (e) { UI.syncErr(); }
-  renderLista();
-})();
+API.abrirRapido((ok) => { ok ? UI.syncOk() : UI.syncErr(); renderLista(); if (codSel) renderDetalhe(); });
+renderLista(); // pinta já com o cache local
 
-} // fim protegerPagina
+} // fim
 </script>
 </body>
 </html>
