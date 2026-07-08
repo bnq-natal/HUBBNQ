@@ -1,59 +1,59 @@
 /* ============================================================
    shared/auth.js — Autenticação e sessão (frontend)
    Guarda o usuário logado e os módulos que ele pode ver.
-   A permissão REAL é rechecada no backend a cada gravação.
-   ============================================================ */
+   A permissão REAL é recheada no backend de cada gravação.
+   ============================================================= */
 const AUTH = (() => {
   const LS_USER = 'bq_usuario';
 
   // Catálogo de módulos da plataforma (label + arquivo + ícone)
   const MODULOS = [
-    { id: 'cadastro',    nome: 'Cadastro',                 icone: '👨‍👩‍👧', arquivo: 'cadastro.html' },
-    { id: 'fluxo',       nome: 'Fluxo de Caixa',           icone: '💰', arquivo: 'fluxo.html' },
-    { id: 'contraturno', nome: 'Créditos (Contraturno/Colônia)', icone: '🎨', arquivo: 'creditos.html' },
-    { id: 'festinha',    nome: 'Festinhas',                icone: '🎉', arquivo: 'festinha.html' },
-    { id: 'brincantes',  nome: 'Brincantes & Escala',      icone: '🙋', arquivo: 'brincantes.html' },
-    { id: 'folha',       nome: 'Folha de Pagamento',       icone: '📋', arquivo: 'folha.html' },
-    { id: 'admin',       nome: 'Administração',            icone: '⚙️', arquivo: 'admin.html' },
+    { id: 'cadastro', nome: 'Cadastro', ícone: '👨‍👩‍👧', arquivo: 'cadastro.html' },
+    { id: 'fluxo', nome: 'Fluxo de Caixa', ícone: '💰', arquivo: 'fluxo.html' },
+    { id: 'contraturno', nome: 'Créditos (Contraturno/Colônia)', ícone: '🎨', arquivo: 'creditos.html' },
+    { id: 'festinha', nome: 'Festinhas', ícone: '🎉', arquivo: 'festinha.html' },
+    { id: 'brincantes', nome: 'Brincantes & Escala', ícone: '🙋', arquivo: 'brincantes.html' },
+    { id: 'folha', nome: 'Folha de Pagamento', ícone: '📋', arquivo: 'folha.html' },
+    { id: 'admin', nome: 'Administração', ícone: '⚙️', arquivo: 'admin.html' },
   ];
 
-  function usuarioAtual() {
+  função usuárioAtual() {
     try { return JSON.parse(localStorage.getItem(LS_USER)) || null; } catch { return null; }
   }
   function logado() { return !!usuarioAtual(); }
 
-  async function login(loginUser, senha) {
-    const r = await API.chamar({ action: 'login', login: loginUser, senha });
+  função assíncrona login(loginUser, senha) {
+    const r = aguarda API.chamar({ action: 'login', login: loginUser, senha });
     if (r.ok) localStorage.setItem(LS_USER, JSON.stringify(r.usuario));
-    return r;
+    retornar r;
   }
   function logout() { localStorage.removeItem(LS_USER); location.href = 'index.html'; }
 
-  // módulos que o usuário pode acessar (admin vê todos)
-  function modulosPermitidos() {
+  // modos que o usuário pode acessar (admin vê todos)
+  função módulosPermitidos() {
     const u = usuarioAtual();
-    if (!u) return [];
-    if (u.role === 'admin') return MODULOS;
-    return MODULOS.filter(m => (u.modulos || []).includes(m.id));
+    se (!u) retorne [];
+    se (u.role === 'admin') retorne MODULOS;
+    retornar MODULOS.filter(m => (u.modulos || []).includes(m.id));
   }
-  function podeVer(idModulo) {
+  função podeVer(idModulo) {
     const u = usuarioAtual();
-    if (!u) return false;
+    se (!u) retorne falso;
     return u.role === 'admin' || (u.modulos || []).includes(idModulo);
   }
 
   // Guarda de página: chame no topo de cada módulo.
   // Redireciona para login se não autenticado ou sem permissão.
-  function protegerPagina(idModulo) {
+  função protegerPágina(idMódulo) {
     if (!API.configurada()) { location.href = 'index.html'; return false; }
     if (!logado()) { location.href = 'index.html'; return false; }
-    if (idModulo && !podeVer(idModulo)) {
+    se (idModulo && !podeVer(idModulo)) {
       alert('Você não tem acesso a este módulo.');
       location.href = 'index.html'; return false;
     }
-    return true;
+    retornar verdadeiro;
   }
 
   return { MODULOS, usuarioAtual, logado, login, logout,
-           modulosPermitidos, podeVer, protegerPagina };
+           módulosPermitidos, podeVer, protegerPagina };
 })();
