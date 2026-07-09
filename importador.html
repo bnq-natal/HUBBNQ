@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Importador — Brincar no Quintal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  .fld { width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:.85rem; background:#fff; }
+  .lbl { font-size:.7rem; text-transform:uppercase; letter-spacing:.03em; color:#64748b; font-weight:600; }
+  ::-webkit-scrollbar { height:8px; width:8px; } ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
+</style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800">
+
+<main class="max-w-5xl mx-auto px-4 py-5">
+  <div class="bg-white rounded-lg border border-slate-200 p-5 mb-4">
+    <h2 class="font-bold text-lg mb-1">📥 Importador de bases históricas</h2>
+    <p class="text-sm text-slate-600">Importa suas planilhas antigas com reconciliação inteligente de nomes e agrupamento de irmãos.</p>
+  </div>
+
+  <!-- Passo 1: cadastro -->
+  <div class="bg-white rounded-lg border border-slate-200 p-5 mb-4">
+    <h3 class="font-semibold mb-2"><span class="bg-blue-900 text-white rounded-full w-6 h-6 inline-flex items-center justify-center text-xs mr-2">1</span>Base de Cadastro (responsáveis + crianças)</h3>
+    <p class="text-xs text-slate-500 mb-2">Sobe primeiro. Cria o índice de "quem é filho de quem" para o match das outras bases. Lê as abas "Base Imp *".</p>
+    <input type="file" id="fileCad" accept=".xlsx,.xls" class="fld mb-2">
+    <div id="cadInfo" class="text-sm"></div>
+  </div>
+
+  <!-- Passo 2: movimentos -->
+  <div class="bg-white rounded-lg border border-slate-200 p-5 mb-4">
+    <h3 class="font-semibold mb-2"><span class="bg-blue-900 text-white rounded-full w-6 h-6 inline-flex items-center justify-center text-xs mr-2">2</span>Bases de movimento (Contraturno / Colônia / Fluxo / Festinhas)</h3>
+    <p class="text-xs text-slate-500 mb-2">Detecta o tipo automaticamente pelas colunas. Faz match com o cadastro do passo 1.</p>
+    <input type="file" id="fileMov" accept=".xlsx,.xls" class="fld mb-2">
+    <div id="movInfo" class="text-sm"></div>
+  </div>
+
+  <!-- Modo consolidado -->
+  <div class="bg-emerald-50 rounded-lg border-2 border-emerald-300 p-5 mb-4">
+    <h3 class="font-semibold mb-2">⚡ Atalho: arquivo já consolidado</h3>
+    <p class="text-xs text-slate-600 mb-2">Se você tem o arquivo <b>BnQ_Importacao_Consolidada.xlsx</b> (já pronto, com abas responsaveis/criancas/movimentos/fluxo_caixa/festinhas), suba aqui direto — sem passar pelos passos 1 e 2.</p>
+    <input type="file" id="fileConsol" accept=".xlsx,.xls" class="fld mb-2">
+    <div id="consolInfo" class="text-sm"></div>
+  </div>
+
+  <!-- Relatório -->
+  <div id="relatorio" class="hidden bg-white rounded-lg border border-slate-200 p-5 mb-4">
+    <h3 class="font-semibold mb-3">📊 Relatório da importação (revise antes de gravar)</h3>
+    <div id="relConteudo"></div>
+    <div class="flex gap-2 mt-4">
+      <button onclick="UI.lock(this,()=>gravarTudo())" class="bg-emerald-700 text-white text-sm px-5 py-2 rounded hover:bg-emerald-600">✔ Confirmar e gravar na nuvem</button>
+      <button onclick="location.reload()" class="bg-slate-200 text-sm px-5 py-2 rounded">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="log" class="hidden bg-slate-900 text-green-300 rounded-lg p-4 text-xs font-mono max-h-72 overflow-y-auto"></div>
+</main>
+
+<script src="shared/api.js"></script>
+<script src="shared/auth.js"></script>
+<script src="shared/ui.js"></script>
+<script>
+if (!API.configurada() || !AUTH.logado()) { location.href = 'index.html'; }
+else if (AUTH.usuarioAtual().role !== 'admin') { alert('Só administradores.'); location.href = 'index.html'; }
+else {
+
+UI.montarHeader('📥 Importador de Bases');
+
+/* ============ MOTOR (testado com dados reais) ============ */
+const E = {
+  norm: n => !n ? '' : String(n).normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z ]/g,'').toLowerCase().trim().replace(/\s+/g,' '),
+  chaveCurta: n => E.norm(n).split(' ').slice(0,2).join(' '),
+  sobrenomes: n => E.norm(n).split(' ').slice(1),
+  tipoEntrada: v => { const t = E.norm(v); return t.startsWith('contrat') ? 'Contratado' : t.startsWith('realiz') ? 'Realizado' : (v||''); },
+  pacote: v => { const p = E.norm(v); const m = {'pacote dune':'Duni','pacote duni':'Duni','pacote une':'Uni','pacote uni':'Uni','pacote te':'Tê','pacote salame':'Salamê','pacote mingue':'Minguê','pacote sorvete':'Sorvete','pacote colore':'Colorê','colonia de ferias':'Colônia de Férias'}; return m[p] || v || ''; },
+  data: v => { if (!v) return ''; if (v instanceof Date) return v.toISOString().slice(0,10); const s = String(v); if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10); const m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); return m ? `${m[3].length===2?'20'+m[3]:m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}` : s.slice(0,10); }
+};
+
+let idxCadastro = {};   // nome_norm -> {responsavel, filhos:[]}
+let idxCurta = {};      // chave curta -> responsavel
+let dadosParaGravar = null;
+
+/* ============ PASSO 1: CADASTRO ============ */
+document.getElementById('fileCad').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  const rd = new FileReader();
+  rd.onload = ev => {
+    const wb = XLSX.read(ev.target.result, { type: 'binary' });
+    idxCadastro = {}; idxCurta = {};
+    let nResp = 0, nCri = 0;
+    wb.SheetNames.filter(a => a.toLowerCase().includes('imp')).forEach(aba => {
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[aba]);
+      rows.forEach(row => {
+        const resp = row['Nome Responsável Financeiro'] || row['NOME'] || row['Nome Completo Responsável Financeiro'];
+        if (!resp) return;
+        nResp++;
+        for (let i = 1; i <= 3; i++) {
+          const c = row['Nome Criança - ' + i];
+          if (c) {
+            idxCadastro[E.norm(c)] = { responsavel: String(resp), cpf: row['CPF']||'', tel: row['Telefone']||row['TelefoneResponsávelFinanceiro']||'', nomeCrianca: String(c) };
+            idxCurta[E.chaveCurta(c)] = String(resp);
+            nCri++;
+          }
+        }
+      });
+    });
+    document.getElementById('cadInfo').innerHTML = `<span class="text-emerald-700">✔ Índice criado: ${nResp} responsáveis, ${nCri} crianças mapeadas.</span>`;
+  };
+  rd.readAsBinaryString(file);
+});
+
+/* ============ PASSO 2: MOVIMENTOS ============ */
+document.getElementById('fileMov').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  const rd = new FileReader();
+  rd.onload = ev => {
+    const wb = XLSX.read(ev.target.result, { type: 'binary' });
+    processarMovimentos(wb);
+  };
+  rd.readAsBinaryString(file);
+});
+
+function detectarTipo(cols) {
+  const c = cols.map(x => E.norm(x));
+  if (c.includes('nome da crianca') && c.includes('tipo entrada')) return 'movimento';
+  if (c.includes('nome da crianca') && (c.includes('fluxo') || c.includes('conta contabil'))) return 'fluxo';
+  if (c.includes('data festa') || c.includes('nome contratante')) return 'festinha';
+  return 'desconhecido';
+}
+
+function processarMovimentos(wb) {
+  const resultado = { responsaveis: {}, criancas: {}, movimentos: [], fluxo: [], festinhas: [],
+    stats: { casou: 0, agrupado: 0, precadastro: 0 } };
+  let seqResp = 0;
+
+  // helpers de vínculo
+  const respExistente = {}; // nome_resp -> cod
+  function codResponsavel(nomeResp, cpf, tel) {
+    const chave = E.norm(nomeResp);
+    if (respExistente[chave]) return respExistente[chave];
+    seqResp++; const cod = 'RESP-' + String(seqResp).padStart(4, '0');
+    respExistente[chave] = cod;
+    resultado.responsaveis[cod] = { cod, nome: nomeResp, cpf: cpf||'', telefone: tel||'', status: 'ativo' };
+    return cod;
+  }
+  // agrupamento de irmãos por sobrenome (para os sem cadastro)
+  const grupoSobrenome = {}; // sobrenome_key -> cod
+
+  function resolverCrianca(nomeCrianca) {
+    const nn = E.norm(nomeCrianca);
+    // 1. match exato com cadastro
+    if (idxCadastro[nn]) {
+      const info = idxCadastro[nn];
+      const cod = codResponsavel(info.responsavel, info.cpf, info.tel);
+      resultado.stats.casou++;
+      return { cod, nome: nomeCrianca };
+    }
+    // 2. match parcial (primeiro+segundo nome)
+    const ck = E.chaveCurta(nomeCrianca);
+    if (idxCurta[ck]) {
+      const cod = codResponsavel(idxCurta[ck]);
+      resultado.stats.casou++;
+      return { cod, nome: nomeCrianca };
+    }
+    // 3. agrupamento de irmãos por sobrenome (2+ sobrenomes)
+    const sob = E.sobrenomes(nomeCrianca);
+    if (sob.length >= 2) {
+      const chave = sob.join(' ');
+      if (grupoSobrenome[chave]) { resultado.stats.agrupado++; return { cod: grupoSobrenome[chave], nome: nomeCrianca }; }
+      const cod = codResponsavel('Resp. ' + sob.map(s=>s[0].toUpperCase()+s.slice(1)).join(' '));
+      grupoSobrenome[chave] = cod;
+      resultado.stats.agrupado++;
+      return { cod, nome: nomeCrianca };
+    }
+    // 4. pré-cadastro individual
+    const cod = codResponsavel('Resp. ' + nomeCrianca);
+    resultado.stats.precadastro++;
+    return { cod, nome: nomeCrianca };
+  }
+
+  function garantirCrianca(cod, nome) {
+    const chave = cod + '|' + E.norm(nome);
+    if (!resultado.criancas[chave]) {
+      resultado.criancas[chave] = { id_crianca: 'CRI-' + Object.keys(resultado.criancas).length, cod_responsavel: cod, nome, status: 'ativo' };
+    }
+    return resultado.criancas[chave].id_crianca;
+  }
+
+  wb.SheetNames.forEach(aba => {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[aba]);
+    if (!rows.length) return;
+    const tipo = detectarTipo(Object.keys(rows[0]));
+
+    if (tipo === 'movimento') {
+      // detecta programa pelo nome da aba/arquivo ou pacote
+      rows.forEach(row => {
+        const nomeC = row['NOME DA CRIANÇA']; if (!nomeC) return;
+        const { cod } = resolverCrianca(nomeC);
+        const idCri = garantirCrianca(cod, String(nomeC));
+        const pacote = E.pacote(row['PACOTE']);
+        const programa = (E.norm(pacote).includes('colonia') || E.norm(aba).includes('colonia')) ? 'Colonia' : 'Contraturno';
+        resultado.movimentos.push({
+          id: 'MOV-' + resultado.movimentos.length, data: E.data(row['DATA']),
+          cod_responsavel: cod, id_crianca: idCri, nome_crianca: String(nomeC),
+          programa, tipo_entrada: E.tipoEntrada(row['TIPO ENTRADA']), pacote,
+          qtde: +row['QTDE'] || 0, valor: +row['VALOR'] || 0,
+          turno: row['TURNO'] || '', observacoes: row['OBSERVAÇÕES'] || ''
+        });
+      });
+    } else if (tipo === 'fluxo') {
+      rows.forEach(row => {
+        resultado.fluxo.push({
+          id: 'FLX-' + resultado.fluxo.length, data: E.data(row['DATA']),
+          fluxo: row['FLUXO'] || '', grupo: row['GRUPO'] || '', conta_contabil: row['CONTA CONTABIL'] || '',
+          detalhamento: row['DETALHAMENTO'] || '', valor: +row['VALOR'] || 0, conta: row['CONTA'] || '',
+          horas: row['HORAS'] || '', ori_lead: row['ORI LEAD'] || '', cpf_nf: row['CPF NF'] || ''
+        });
+      });
+    } else if (tipo === 'festinha') {
+      rows.forEach(row => {
+        const contratante = row['Nome Contratante'];
+        let cod = '';
+        if (contratante) cod = codResponsavel(String(contratante), '', row['Telefone']||'');
+        resultado.festinhas.push({
+          id: 'FES-' + resultado.festinhas.length, data_festa: E.data(row['Data Festa']),
+          turno: row['Turno'] || '', cod_responsavel: cod, aniversariante: row['Nome da Criança'] || '',
+          idade: row['Idade'] || '', formato: row['Modelo Festa'] || row['Tipo Festa'] || '',
+          qtd_criancas: +row['Crianças'] || 0, qtd_adultos: +row['Adultos'] || 0,
+          status: row['Status'] || 'Realizada', valor_total: 0, valor_pago: 0
+        });
+      });
+    }
+  });
+
+  dadosParaGravar = resultado;
+  mostrarRelatorio(resultado, wb.SheetNames);
+}
+
+function mostrarRelatorio(r, abas) {
+  const nResp = Object.keys(r.responsaveis).length;
+  const nCri = Object.keys(r.criancas).length;
+  document.getElementById('relatorio').classList.remove('hidden');
+  document.getElementById('relConteudo').innerHTML = `
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+      <div class="bg-slate-50 rounded p-3"><p class="lbl">Responsáveis</p><p class="text-xl font-bold">${nResp}</p></div>
+      <div class="bg-slate-50 rounded p-3"><p class="lbl">Crianças</p><p class="text-xl font-bold">${nCri}</p></div>
+      <div class="bg-slate-50 rounded p-3"><p class="lbl">Movimentos</p><p class="text-xl font-bold">${r.movimentos.length}</p></div>
+      <div class="bg-slate-50 rounded p-3"><p class="lbl">Fluxo</p><p class="text-xl font-bold">${r.fluxo.length}</p></div>
+    </div>
+    <div class="bg-blue-50 border border-blue-200 rounded p-3 text-sm">
+      <p class="font-semibold mb-1">Reconciliação de nomes:</p>
+      <ul class="text-xs space-y-0.5">
+        <li>✔ <b>${r.stats.casou}</b> movimentos vinculados ao responsável do cadastro</li>
+        <li>👥 <b>${r.stats.agrupado}</b> agrupados como irmãos (por sobrenome)</li>
+        <li>➕ <b>${r.stats.precadastro}</b> pré-cadastros individuais ("Resp. &lt;nome&gt;")</li>
+      </ul>
+    </div>
+    ${r.festinhas.length ? `<p class="text-xs text-slate-500 mt-2">🎉 ${r.festinhas.length} festinhas · abas lidas: ${abas.join(', ')}</p>` : ''}
+    <p class="text-xs text-amber-700 mt-2">⚠ Isto vai ADICIONAR aos dados atuais. Recomendado importar numa base limpa.</p>`;
+}
+
+async function gravarTudo() {
+  if (!dadosParaGravar) return;
+  const log = document.getElementById('log'); log.classList.remove('hidden');
+  const add = m => { log.innerHTML += m + '<br>'; log.scrollTop = log.scrollHeight; };
+  const r = dadosParaGravar;
+  const s = API.get();
+  s._seq = s._seq || {};
+
+  add('Preparando dados…');
+  // mescla nos arrays existentes
+  Object.values(r.responsaveis).forEach(x => s.responsaveis.push(x));
+  Object.values(r.criancas).forEach(x => { x.id = x.id_crianca; s.criancas.push(x); });
+  r.movimentos.forEach(x => s.movimentos.push(x));
+  r.fluxo.forEach(x => { x.mes = +(x.data||'').slice(5,7)||''; x.ano = +(x.data||'').slice(0,4)||''; s.fluxo_caixa.push(x); });
+  r.festinhas.forEach(x => s.festinhas.push(x));
+  // atualiza sequência
+  s._seq.responsaveis = Math.max(s._seq.responsaveis||0, window._maxSeqResp||0, (s._seq.responsaveis||0) + Object.keys(r.responsaveis).length);
+
+  add(`Responsáveis: ${Object.keys(r.responsaveis).length}`);
+  add(`Crianças: ${Object.keys(r.criancas).length}`);
+  add(`Movimentos: ${r.movimentos.length}`);
+  add(`Fluxo: ${r.fluxo.length}`);
+  add(`Festinhas: ${r.festinhas.length}`);
+  API.gravarLocal();
+  add('Enviando para a nuvem (pode levar alguns segundos)…');
+  UI.syncBusy();
+  try {
+    await API.enviar();
+    add('✔ IMPORTAÇÃO CONCLUÍDA!');
+    UI.syncOk(); UI.toast('Importação concluída ✔', 'ok');
+    document.getElementById('relatorio').classList.add('hidden');
+  } catch (e) { add('✖ Erro: ' + e.message); UI.syncErr(); UI.toast('Erro: ' + e.message, 'erro'); }
+}
+
+
+/* ============ MODO CONSOLIDADO (arquivo já pronto) ============ */
+document.getElementById('fileConsol').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  const rd = new FileReader();
+  rd.onload = ev => {
+    const wb = XLSX.read(ev.target.result, { type: 'binary' });
+    const mapa = { responsaveis:'responsaveis', criancas:'criancas', movimentos:'movimentos',
+                   fluxo_caixa:'fluxo_caixa', festinhas:'festinhas' };
+    const resultado = { responsaveis:{}, criancas:{}, movimentos:[], fluxo:[], festinhas:[],
+      stats:{casou:0,agrupado:0,precadastro:0} };
+    let maxSeq = 0;
+    wb.SheetNames.forEach(aba => {
+      const chave = mapa[aba.toLowerCase().trim()];
+      if (!chave) return;
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[aba]);
+      if (chave === 'responsaveis') rows.forEach(r => {
+        if (r.cod) { resultado.responsaveis[r.cod] = r;
+          const n = +(String(r.cod).replace('RESP-','')); if (n>maxSeq) maxSeq=n; }
+      });
+      else if (chave === 'criancas') rows.forEach(r => { resultado.criancas[r.id_crianca||UI.uid()] = r; });
+      else if (chave === 'movimentos') resultado.movimentos = rows;
+      else if (chave === 'fluxo_caixa') resultado.fluxo = rows;
+      else if (chave === 'festinhas') resultado.festinhas = rows;
+    });
+    dadosParaGravar = resultado;
+    window._maxSeqResp = maxSeq;
+    document.getElementById('consolInfo').innerHTML =
+      `<span class="text-emerald-700">✔ Lido: ${Object.keys(resultado.responsaveis).length} responsáveis · ${Object.keys(resultado.criancas).length} crianças · ${resultado.movimentos.length} movimentos · ${resultado.fluxo.length} fluxo · ${resultado.festinhas.length} festinhas</span>`;
+    mostrarRelatorio(resultado, wb.SheetNames);
+  };
+  rd.readAsBinaryString(file);
+});
+
+
+/* expõe funções usadas por onclick */
+window.gravarTudo = gravarTudo;
+window.mostrarRelatorio = mostrarRelatorio;
+
+} // fim
+</script>
+</body>
+</html>
