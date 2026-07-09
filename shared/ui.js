@@ -114,6 +114,30 @@ const UI = (() => {
     return { get: () => escolhido, clear: () => { input.value = ''; escolhido = null; } };
   }
 
-  return { fmtBRL, fmtNum, esc, hoje, uid, montarHeader, setSync,
+
+  /* ---------- Anti duplo-clique ----------
+     Envolve um handler async: desabilita o botão que disparou o evento,
+     mostra "aguarde", e reabilita ao terminar (sucesso ou erro).
+     Uso no HTML:  onclick="UI.lock(this, () => salvarX('id'))"
+  --------------------------------------------------------------- */
+  async function lock(btn, fn) {
+    if (!btn || btn.disabled) return;
+    const txt = btn.textContent;
+    btn.disabled = true;
+    btn.dataset._txt = txt;
+    btn.style.opacity = '0.6';
+    btn.style.cursor = 'wait';
+    const original = btn.textContent;
+    btn.textContent = '⏳ aguarde…';
+    try { await fn(); }
+    finally {
+      btn.disabled = false;
+      btn.style.opacity = '';
+      btn.style.cursor = '';
+      btn.textContent = original;
+    }
+  }
+
+  return { fmtBRL, fmtNum, esc, hoje, uid, montarHeader, setSync, lock,
            syncOk, syncBusy, syncErr, toast, modal, fecharModal, opcoes, autocomplete };
 })();
