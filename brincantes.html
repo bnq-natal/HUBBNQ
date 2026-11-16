@@ -31,7 +31,10 @@
         <div><span class="lbl">Status</span><br><select id="eStatus" class="fld !w-36"><option value="todos">Todos</option><option>Pendente</option><option>Pago</option></select></div>
         <div><span class="lbl">Brincante</span><br><select id="eBrinc" class="fld !w-48"></select></div>
       </div>
-      <button onclick="abrirEscala()" class="bg-blue-900 text-white text-sm px-4 py-2 rounded hover:bg-blue-800">+ Escalar</button>
+      <div class="flex gap-2">
+        <button onclick="UI.lock(this,()=>continuarEscalaMes())" title="Continua, dia a dia, a sequência dos 7 últimos dias do mês anterior" class="bg-amber-600 text-white text-sm px-4 py-2 rounded hover:bg-amber-500">» Continuar mês</button>
+        <button onclick="abrirEscala()" class="bg-blue-900 text-white text-sm px-4 py-2 rounded hover:bg-blue-800">+ Escalar</button>
+      </div>
     </div>
 
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
@@ -118,12 +121,70 @@ function escalasFiltradas() {
 }
 
 function preencherFiltrosEscala() {
-  const anos = [...new Set(API.tabela('escalas').map(e => (e.data || '').slice(0, 4)).filter(Boolean))].sort();
+  const anoAtual = new Date().getFullYear();
+  const anos = [...new Set(API.tabela('escalas').map(e => (e.data || '').slice(0, 4)).filter(Boolean)
+    .concat([String(anoAtual), String(anoAtual + 1)]))].sort();
   const brincs = [...API.tabela('brincantes')].sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
   const set = (id, html) => { const s = document.getElementById(id); const v = s.value; s.innerHTML = html; if ([...s.options].some(o => o.value === v)) s.value = v; };
   set('eAno', '<option value="todos">Todos</option>' + anos.map(a => `<option>${a}</option>`).join(''));
   set('eMes', '<option value="todos">Todos</option>' + Object.entries(MESES).map(([k, v]) => `<option value="${k}">${v}</option>`).join(''));
   set('eBrinc', '<option value="todos">Todos</option>' + brincs.map(b => `<option value="${b.cod}">${UI.esc(b.nome)}</option>`).join(''));
+}
+
+function isoLocal(data) {
+  const a = data.getFullYear(), m = String(data.getMonth() + 1).padStart(2, '0'), d = String(data.getDate()).padStart(2, '0');
+  return `${a}-${m}-${d}`;
+}
+
+function planoContinuidadeMes(escalas, ano, mes) {
+  const inicio = new Date(+ano, +mes - 1, 1);
+  const fim = new Date(+ano, +mes, 0);
+  const inicioAnterior = new Date(inicio); inicioAnterior.setDate(inicioAnterior.getDate() - 7);
+  const porData = new Map();
+  escalas.forEach(e => {
+    if (!e.data) return;
+    if (!porData.has(e.data)) porData.set(e.data, []);
+    porData.get(e.data).push(e);
+  });
+  const existentes = new Set(escalas.filter(e => (e.data || '').startsWith(`${ano}-${mes}-`)).map(e => e.data));
+  const registros = [];
+  let indiceDia = 0;
+  for (let alvo = new Date(inicio); alvo <= fim; alvo.setDate(alvo.getDate() + 1), indiceDia++) {
+    const fonte = new Date(inicioAnterior); fonte.setDate(fonte.getDate() + (indiceDia % 7));
+    const dataAlvo = isoLocal(alvo);
+    if (existentes.has(dataAlvo)) continue;
+    const dataFonte = isoLocal(fonte);
+    (porData.get(dataFonte) || []).forEach(e => registros.push({
+      data: dataAlvo, tipo_dia: tipoDia(dataAlvo), cod_brincante: e.cod_brincante,
+      nome_brincante: e.nome_brincante, funcao: e.funcao,
+      valor: valorDe(e.funcao, tipoDia(dataAlvo)), evento_ref: '', status_pgto: 'Pendente'
+    }));
+  }
+  return { registros, diasExistentes: existentes.size, temBase: [...porData.keys()].some(d => d >= isoLocal(inicioAnterior) && d < isoLocal(inicio)) };
+}
+
+async function continuarEscalaMes() {
+  const ano = document.getElementById('eAno').value, mes = document.getElementById('eMes').value;
+  if (ano === 'todos' || mes === 'todos') { UI.toast('Escolha um ano e um mês para continuar a escala.', 'erro'); return; }
+  const plano = planoContinuidadeMes(API.tabela('escalas'), ano, mes);
+  if (!plano.temBase) { UI.toast('Os 7 últimos dias do mês anterior não têm escala para continuar.', 'erro'); return; }
+  if (!plano.registros.length) { UI.toast('Este mês já está preenchido; nada foi alterado.', 'ok'); return; }
+  const aviso = plano.diasExistentes ? `\n${plano.diasExistentes} dia(s) já preenchido(s) serão preservados, sem sobrescrever.` : '';
+  if (!confirm(`Criar ${plano.registros.length} diária(s) em ${MESES[mes]}/${ano}, continuando a sequência semanal do fim do mês anterior?${aviso}`)) return;
+  UI.syncBusy();
+  let salvos = 0;
+  try {
+    for (const reg of plano.registros) {
+      const r = await API.upsert('escalas', reg);
+      if (!r.ok) throw new Error(r.erro || 'falha ao salvar');
+      salvos++;
+    }
+    UI.syncOk(); preencherFiltrosEscala(); renderEscala();
+    UI.toast(`${salvos} diária(s) criadas; dias existentes foram preservados.`, 'ok');
+  } catch (e) {
+    UI.syncErr(); renderEscala();
+    UI.toast(`A continuação parou após ${salvos} diária(s): ${e.message}`, 'erro');
+  }
 }
 
 function renderEscala() {
